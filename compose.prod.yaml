@@ -1,0 +1,53 @@
+name: ${COMPOSE_PROJECT_NAME:-bd-creator}
+
+services:
+  api:
+    image: carthographie/bd-creator-api:latest
+    container_name: bd_creator_api
+    command: sh /app/scripts/start-api-prod.sh
+    env_file:
+      - .env.prod
+    ports:
+      - "${API_BIND_PORT:-8000}:8000"
+    volumes:
+      - "${SHARED_SECRETS_DIR:-/opt/stacks/_shared/secrets}:${SHARED_SECRETS_DIR:-/opt/stacks/_shared/secrets}:ro"
+    networks:
+      - default
+      - shared_backend
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_PROXY_NETWORK:-proxy}"
+      - "traefik.http.routers.bd-creator-api.rule=Host(`${API_DOMAIN:-bd-api.animation-messe.fr}`)"
+      - "traefik.http.routers.bd-creator-api.entrypoints=websecure"
+      - "traefik.http.routers.bd-creator-api.tls=true"
+      - "traefik.http.routers.bd-creator-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bd-creator-api.loadbalancer.server.port=8000"
+    restart: unless-stopped
+
+  web:
+    image: carthographie/bd-creator-web:latest
+    container_name: bd_creator_web
+    env_file:
+      - .env.prod
+    ports:
+      - "${WEB_BIND_PORT:-5173}:5173"
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_PROXY_NETWORK:-proxy}"
+      - "traefik.http.routers.bd-creator-web.rule=Host(`${WEB_DOMAIN:-bd.animation-messe.fr}`)"
+      - "traefik.http.routers.bd-creator-web.entrypoints=websecure"
+      - "traefik.http.routers.bd-creator-web.tls=true"
+      - "traefik.http.routers.bd-creator-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bd-creator-web.loadbalancer.server.port=5173"
+    restart: unless-stopped
+
+networks:
+  shared_backend:
+    external: true
+    name: ${SHARED_DB_NETWORK:-backend}
+  proxy:
+    external: true
+    name: ${TRAEFIK_PROXY_NETWORK:-proxy}
