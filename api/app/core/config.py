@@ -17,9 +17,9 @@ class Settings(BaseSettings):
 
     db_host: str = Field(default="localhost", alias="DB_HOST")
     db_port: int = Field(default=5432, alias="DB_PORT")
-    db_name: str = Field(default="bd_creator", alias="DB_NAME")
-    db_user: str = Field(default="postgres", alias="DB_USER")
-    db_password: str = Field(default="postgres", alias="DB_PASSWORD")
+    db_name: str = Field(default="carthographie", alias="DB_NAME")
+    db_user: str = Field(default="app_bd", alias="DB_USER")
+    db_password: str = Field(default="change-me", alias="DB_PASSWORD")
 
     auth_mode: str = Field(default="mock", alias="AUTH_MODE")
     auth_mock_base_url: str = Field(default="http://localhost:8001", alias="AUTH_MOCK_BASE_URL")

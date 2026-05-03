@@ -10,8 +10,8 @@ ENV PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /app
 
-COPY pyproject.toml /app/
-RUN uv sync --frozen --no-dev
+COPY pyproject.toml uv.lock /app/
+RUN uv sync --frozen
 
 COPY . /app
 
