@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+const LOGIN_URL = API_BASE ? `${API_BASE}/login` : "/login";
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -9,7 +10,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (res.status === 401) {
-    window.location.href = "/login";
+    window.location.href = LOGIN_URL;
     throw new Error("unauthorized");
   }
   if (!res.ok) {

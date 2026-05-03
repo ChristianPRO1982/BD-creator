@@ -16,13 +16,13 @@ logging.basicConfig(level=settings.app_log_level)
 
 app = FastAPI(title="BD Creator API", version="0.1.0")
 
+app.add_middleware(CurrentUserMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.session_secret_key,
     same_site=settings.session_cookie_samesite,
     https_only=settings.session_cookie_secure,
 )
-app.add_middleware(CurrentUserMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
