@@ -84,6 +84,9 @@ class TextBlockCreate(BaseModel):
     height: float
     font_size: int = 16
     bubble_style: str = "speech"
+    text_color: str = "#000000"
+    background_color: str = "#ffffff"
+    background_opacity: float = 1.0
 
 
 class TextBlockUpdate(BaseModel):
@@ -94,6 +97,9 @@ class TextBlockUpdate(BaseModel):
     height: float | None = None
     font_size: int | None = None
     bubble_style: str | None = None
+    text_color: str | None = None
+    background_color: str | None = None
+    background_opacity: float | None = None
 
 
 class TextBlockOut(BaseModel):
@@ -106,6 +112,9 @@ class TextBlockOut(BaseModel):
     height: float
     font_size: int
     bubble_style: str
+    text_color: str
+    background_color: str
+    background_opacity: float
 
     class Config:
         from_attributes = True

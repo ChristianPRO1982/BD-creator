@@ -12,6 +12,14 @@ from app.db.models import Comic, Page, Panel, TextBlock
 from app.storage.s3 import storage
 
 
+def _hex_to_rgba(color: str, opacity: float) -> str:
+    color = color.lstrip("#")
+    r = int(color[0:2], 16)
+    g = int(color[2:4], 16)
+    b = int(color[4:6], 16)
+    return f"rgba({r}, {g}, {b}, {opacity:.3f})"
+
+
 def _page_html(page: Page, panels: list[Panel]) -> str:
     template = page.template
     panel_divs = []
@@ -21,7 +29,9 @@ def _page_html(page: Page, panels: list[Panel]) -> str:
             (
                 f"<div style='position:absolute;left:{tb.x*100:.2f}%;top:{tb.y*100:.2f}%;"
                 f"width:{tb.width*100:.2f}%;height:{tb.height*100:.2f}%;"
-                f"font-size:{tb.font_size}px;border:1px solid #fff;padding:6px;border-radius:8px;'>"
+                f"font-size:{tb.font_size}px;color:{tb.text_color};"
+                f"background:{_hex_to_rgba(tb.background_color, tb.background_opacity)};"
+                "padding:6px;border-radius:8px;overflow:hidden;'>"
                 f"{html.escape(tb.content)}</div>"
             )
             for tb in panel.text_blocks

@@ -36,6 +36,17 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px; }
 
 .controls { display: flex; gap: 10px; align-items: center; }
 .switch-group { display: flex; gap: 6px; }
+.dropdown-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dropdown-group label {
+  font-size: 0.9rem;
+}
+.dropdown-group select {
+  min-width: 130px;
+}
 button, .logout {
   border: 1px solid var(--muted);
   background: var(--card);
@@ -81,6 +92,92 @@ input, select {
   font-weight: 700;
 }
 
+.editor-layout {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 14px;
+}
+
+.editor-sidebar {
+  border: 1px solid var(--muted);
+  border-radius: 12px;
+  padding: 12px;
+  max-height: 75vh;
+  overflow: auto;
+}
+
+.editor-preview {
+  margin-bottom: 12px;
+}
+
+.panel-canvas {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid var(--fg);
+  border-radius: 12px;
+  min-height: 160px;
+}
+
+.panel-canvas.active {
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.panel-canvas-bg {
+  position: absolute;
+  inset: 0;
+}
+
+.panel-canvas-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.text-block {
+  position: absolute;
+  padding: 6px;
+  border-radius: 8px;
+  overflow: hidden;
+  white-space: pre-wrap;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.text-block.draggable {
+  cursor: move;
+}
+
+.panel-order {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.text-block-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.text-block-editor {
+  border: 1px solid var(--muted);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.text-block-editor textarea {
+  width: 100%;
+  min-height: 70px;
+  margin-bottom: 8px;
+}
+
+.error-text {
+  color: #b3261e;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -105,5 +202,9 @@ input, select {
 
 @media (max-width: 760px) {
   .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .controls { flex-wrap: wrap; }
+  .dropdown-group { width: 100%; justify-content: space-between; }
+  .dropdown-group select { width: min(220px, 100%); }
   main { padding: 12px; }
+  .editor-layout { grid-template-columns: 1fr; }
 }

@@ -39,6 +39,9 @@ export type TextBlock = {
   height: number;
   font_size: number;
   bubble_style: string;
+  text_color: string;
+  background_color: string;
+  background_opacity: number;
 };
 
 export type Asset = {

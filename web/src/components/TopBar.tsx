@@ -9,14 +9,20 @@ export function TopBar() {
     <header className="topbar">
       <h1>{t("app_title")}</h1>
       <div className="controls">
-        <div className="switch-group">
-          <button className={theme === "white" ? "active" : ""} onClick={() => setTheme("white")}>{t("theme_white")}</button>
-          <button className={theme === "black" ? "active" : ""} onClick={() => setTheme("black")}>{t("theme_black")}</button>
-          <button className={theme === "system" ? "active" : ""} onClick={() => setTheme("system")}>{t("theme_system")}</button>
+        <div className="dropdown-group">
+          <label htmlFor="theme-select">{t("theme")}</label>
+          <select id="theme-select" value={theme} onChange={(event) => setTheme(event.target.value as "white" | "black" | "system")}>
+            <option value="white">{t("theme_white")}</option>
+            <option value="black">{t("theme_black")}</option>
+            <option value="system">{t("theme_system")}</option>
+          </select>
         </div>
-        <div className="switch-group">
-          <button className={lang === "fr" ? "active" : ""} onClick={() => setLang("fr")}>FR</button>
-          <button className={lang === "en" ? "active" : ""} onClick={() => setLang("en")}>EN</button>
+        <div className="dropdown-group">
+          <label htmlFor="language-select">{t("language")}</label>
+          <select id="language-select" value={lang} onChange={(event) => setLang(event.target.value as "fr" | "en")}>
+            <option value="fr">FR</option>
+            <option value="en">EN</option>
+          </select>
         </div>
         <a className="logout" href="/logout">{t("logout")}</a>
       </div>

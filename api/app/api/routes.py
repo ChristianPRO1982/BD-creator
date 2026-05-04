@@ -22,7 +22,7 @@ from app.api.schemas import (
     TextBlockOut,
     TextBlockUpdate,
 )
-from app.api.utils import invalidate_page_artifact, validate_text_bounds
+from app.api.utils import invalidate_page_artifact, validate_hex_color, validate_opacity, validate_text_bounds
 from app.db.models import Asset, Comic, Page, Panel, Slot, Template, TextBlock
 from app.db.session import get_db
 from app.render.service import render_missing_artifacts
@@ -193,6 +193,23 @@ def list_panels(page_id: uuid.UUID, db: Session = Depends(get_db), user: Authent
     return db.scalars(select(Panel).where(Panel.page_id == page_id).order_by(Panel.reading_order)).all()
 
 
+@router.get("/pages/{page_id}/text-blocks", response_model=list[TextBlockOut])
+def list_page_text_blocks(page_id: uuid.UUID, db: Session = Depends(get_db), user: AuthenticatedUser = Depends(require_user)):
+    page = db.scalar(
+        select(Page.id)
+        .join(Comic, Comic.id == Page.comic_id)
+        .where(Page.id == page_id, Comic.user_id == user.user_uuid)
+    )
+    if page is None:
+        raise HTTPException(status_code=404, detail="Page not found")
+    return db.scalars(
+        select(TextBlock)
+        .join(Panel, Panel.id == TextBlock.panel_id)
+        .where(Panel.page_id == page_id)
+        .order_by(Panel.reading_order)
+    ).all()
+
+
 @router.patch("/panels/{panel_id}", response_model=PanelOut)
 def update_panel(panel_id: uuid.UUID, payload: PanelUpdate, db: Session = Depends(get_db), user: AuthenticatedUser = Depends(require_user)):
     panel = db.scalar(
@@ -203,6 +220,8 @@ def update_panel(panel_id: uuid.UUID, payload: PanelUpdate, db: Session = Depend
     )
     if panel is None:
         raise HTTPException(status_code=404, detail="Panel not found")
+    if panel.page.status == "validated":
+        raise HTTPException(status_code=409, detail="Cannot edit a validated page")
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(panel, key, value)
     invalidate_page_artifact(db, panel.page_id)
@@ -235,8 +254,13 @@ def create_text_block(panel_id: uuid.UUID, payload: TextBlockCreate, db: Session
     )
     if panel is None:
         raise HTTPException(status_code=404, detail="Panel not found")
+    if panel.page.status == "validated":
+        raise HTTPException(status_code=409, detail="Cannot edit a validated page")
     try:
         validate_text_bounds(payload.x, payload.y, payload.width, payload.height)
+        validate_hex_color(payload.text_color)
+        validate_hex_color(payload.background_color)
+        validate_opacity(payload.background_opacity)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -265,11 +289,16 @@ def update_text_block(
     )
     if text_block is None:
         raise HTTPException(status_code=404, detail="Text block not found")
+    if text_block.panel.page.status == "validated":
+        raise HTTPException(status_code=409, detail="Cannot edit a validated page")
 
     merged = text_block.__dict__.copy()
     merged.update(payload.model_dump(exclude_unset=True))
     try:
         validate_text_bounds(merged["x"], merged["y"], merged["width"], merged["height"])
+        validate_hex_color(merged["text_color"])
+        validate_hex_color(merged["background_color"])
+        validate_opacity(merged["background_opacity"])
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -299,6 +328,8 @@ def delete_text_block(
     )
     if text_block is None:
         raise HTTPException(status_code=404, detail="Text block not found")
+    if text_block.panel.page.status == "validated":
+        raise HTTPException(status_code=409, detail="Cannot edit a validated page")
 
     page_id = text_block.panel.page_id
     db.delete(text_block)
