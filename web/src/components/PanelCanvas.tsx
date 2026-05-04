@@ -28,6 +28,21 @@ function hexToRgba(color: string, opacity: number) {
   return `rgba(${r}, ${g}, ${b}, ${clamp(opacity, 0, 1)})`;
 }
 
+function bubbleStyleToCss(style: string): CSSProperties {
+  if (style === "tail_top_left") return { borderTopLeftRadius: "0px" };
+  if (style === "tail_top_right") return { borderTopRightRadius: "0px" };
+  if (style === "tail_bottom_left") return { borderBottomLeftRadius: "0px" };
+  if (style === "tail_bottom_right") return { borderBottomRightRadius: "0px" };
+  if (style === "thought") {
+    return {
+      borderStyle: "dashed",
+      borderWidth: "2px",
+      borderColor: "rgba(0,0,0,0.75)",
+    };
+  }
+  return {};
+}
+
 export function PanelCanvas({
   panel,
   slot,
@@ -93,6 +108,7 @@ export function PanelCanvas({
               fontSize: `${tb.font_size}px`,
               color: tb.text_color,
               background: hexToRgba(tb.background_color, tb.background_opacity),
+              ...bubbleStyleToCss(tb.bubble_style),
             }}
             onMouseDown={(event) => {
               if (mode !== "edit" || !onTextDragStart) return;

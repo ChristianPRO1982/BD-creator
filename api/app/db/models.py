@@ -154,7 +154,7 @@ class TextBlock(Base):
     width: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
     height: Mapped[float] = mapped_column(Float, default=0.2, nullable=False)
     font_size: Mapped[int] = mapped_column(Integer, default=16, nullable=False)
-    bubble_style: Mapped[str] = mapped_column(String(32), default="speech", nullable=False)
+    bubble_style: Mapped[str] = mapped_column(String(32), default="none", nullable=False)
     text_color: Mapped[str] = mapped_column(String(16), default="#000000", nullable=False)
     background_color: Mapped[str] = mapped_column(String(16), default="#ffffff", nullable=False)
     background_opacity: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)

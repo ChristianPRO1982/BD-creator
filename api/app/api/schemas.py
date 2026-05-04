@@ -83,7 +83,7 @@ class TextBlockCreate(BaseModel):
     width: float
     height: float
     font_size: int = 16
-    bubble_style: str = "speech"
+    bubble_style: str = "none"
     text_color: str = "#000000"
     background_color: str = "#ffffff"
     background_opacity: float = 1.0

@@ -459,7 +459,14 @@ export function PageEditorPage() {
                       <input type="number" step="0.01" min={0.01} max={1} value={tb.width} onChange={(e) => onTextFieldChange(tb.id, "width", Number(e.target.value))} />
                       <input type="number" step="0.01" min={0.01} max={1} value={tb.height} onChange={(e) => onTextFieldChange(tb.id, "height", Number(e.target.value))} />
                       <input type="number" min={8} max={72} value={tb.font_size} onChange={(e) => onTextFieldChange(tb.id, "font_size", Number(e.target.value))} />
-                      <input value={tb.bubble_style} onChange={(e) => onTextFieldChange(tb.id, "bubble_style", e.target.value)} />
+                      <select value={tb.bubble_style} onChange={(e) => onTextFieldChange(tb.id, "bubble_style", e.target.value)}>
+                        <option value="none">Sans flèche</option>
+                        <option value="tail_top_left">Flèche coin haut gauche</option>
+                        <option value="tail_top_right">Flèche coin haut droit</option>
+                        <option value="tail_bottom_left">Flèche coin bas gauche</option>
+                        <option value="tail_bottom_right">Flèche coin bas droit</option>
+                        <option value="thought">Pensée (pointillé)</option>
+                      </select>
                       <input value={tb.text_color} onChange={(e) => onTextFieldChange(tb.id, "text_color", e.target.value)} />
                       <input value={tb.background_color} onChange={(e) => onTextFieldChange(tb.id, "background_color", e.target.value)} />
                       <input type="number" step="0.1" min={0} max={1} value={tb.background_opacity} onChange={(e) => onTextFieldChange(tb.id, "background_opacity", Number(e.target.value))} />
@@ -479,7 +486,14 @@ export function PageEditorPage() {
                 <input name="width" type="number" step="0.01" defaultValue={0.5} min={0.01} max={1} />
                 <input name="height" type="number" step="0.01" defaultValue={0.2} min={0.01} max={1} />
                 <input name="font_size" type="number" defaultValue={16} min={8} max={72} />
-                <input name="bubble_style" defaultValue="speech" />
+                <select name="bubble_style" defaultValue="none">
+                  <option value="none">Sans flèche</option>
+                  <option value="tail_top_left">Flèche coin haut gauche</option>
+                  <option value="tail_top_right">Flèche coin haut droit</option>
+                  <option value="tail_bottom_left">Flèche coin bas gauche</option>
+                  <option value="tail_bottom_right">Flèche coin bas droit</option>
+                  <option value="thought">Pensée (pointillé)</option>
+                </select>
                 <input name="text_color" defaultValue="#000000" />
                 <input name="background_color" defaultValue="#ffffff" />
                 <input name="background_opacity" type="number" step="0.1" min={0} max={1} defaultValue={1} />

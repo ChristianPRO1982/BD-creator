@@ -20,6 +20,20 @@ def _hex_to_rgba(color: str, opacity: float) -> str:
     return f"rgba({r}, {g}, {b}, {opacity:.3f})"
 
 
+def _bubble_style_css(style: str) -> str:
+    if style == "tail_top_left":
+        return "border-top-left-radius:0px;"
+    if style == "tail_top_right":
+        return "border-top-right-radius:0px;"
+    if style == "tail_bottom_left":
+        return "border-bottom-left-radius:0px;"
+    if style == "tail_bottom_right":
+        return "border-bottom-right-radius:0px;"
+    if style == "thought":
+        return "border:2px dashed rgba(0,0,0,0.75);"
+    return ""
+
+
 def _page_html(page: Page, panels: list[Panel]) -> str:
     template = page.template
     panel_divs = []
@@ -31,7 +45,7 @@ def _page_html(page: Page, panels: list[Panel]) -> str:
                 f"width:{tb.width*100:.2f}%;height:{tb.height*100:.2f}%;"
                 f"font-size:{tb.font_size}px;color:{tb.text_color};"
                 f"background:{_hex_to_rgba(tb.background_color, tb.background_opacity)};"
-                "padding:6px;border-radius:8px;overflow:hidden;'>"
+                f"padding:6px;border-radius:8px;overflow:hidden;{_bubble_style_css(tb.bubble_style)}'>"
                 f"{html.escape(tb.content)}</div>"
             )
             for tb in panel.text_blocks
