@@ -1,8 +1,8 @@
 import { ChangeEvent, FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useI18n } from "../contexts/LanguageContext";
 import { PanelCanvas } from "../components/PanelCanvas";
-import { api, uploadAsset } from "../services/api";
+import { api } from "../services/api";
 import { Asset, Page, Panel, Template, TextBlock } from "../types";
 
 type TextBlocksByPanelId = Record<string, TextBlock[]>;
@@ -36,6 +36,7 @@ export function PageEditorPage() {
   const [panels, setPanels] = useState<Panel[]>([]);
   const [template, setTemplate] = useState<Template | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [assetSearch, setAssetSearch] = useState("");
   const [activePanelId, setActivePanelId] = useState<string | null>(null);
   const [textBlocksByPanelId, setTextBlocksByPanelId] = useState<TextBlocksByPanelId>({});
   const [dragState, setDragState] = useState<DragState>(null);
@@ -46,13 +47,19 @@ export function PageEditorPage() {
     [panels, activePanelId]
   );
 
+  const filteredAssets = useMemo(() => {
+    const q = assetSearch.trim().toLowerCase();
+    if (!q) return assets;
+    return assets.filter((a) => a.name.toLowerCase().includes(q));
+  }, [assets, assetSearch]);
+
   async function load() {
     if (!pageId) return;
     const p = await api.get<Page>(`/api/pages/${pageId}`);
     const [panelData, templateData, assetData, textBlocks] = await Promise.all([
       api.get<Panel[]>(`/api/pages/${pageId}/panels`),
       api.get<Template[]>("/api/templates"),
-      api.get<Asset[]>("/api/assets"),
+      api.get<Asset[]>(`/api/comics/${p.comic_id}/assets`),
       api.get<TextBlock[]>(`/api/pages/${pageId}/text-blocks`),
     ]);
 
@@ -68,6 +75,13 @@ export function PageEditorPage() {
     setAssets(assetData);
     setTextBlocksByPanelId(grouped);
     setActivePanelId((prev) => prev || panelData[0]?.id || null);
+  }
+
+  async function loadAssets(search?: string) {
+    if (!page) return;
+    const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+    const data = await api.get<Asset[]>(`/api/comics/${page.comic_id}/assets${query}`);
+    setAssets(data);
   }
 
   useEffect(() => {
@@ -138,11 +152,6 @@ export function PageEditorPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }
-
-  async function onUpload(file: File) {
-    await uploadAsset(file, file.name);
-    await load();
   }
 
   async function onAddText(e: FormEvent<HTMLFormElement>) {
@@ -296,6 +305,7 @@ export function PageEditorPage() {
         <button onClick={onUnvalidate} disabled={!page || page.status === "draft"}>
           {t("unvalidate")}
         </button>
+        {page ? <Link to={`/comics/${page.comic_id}/assets`}>{t("assets_bank")}</Link> : null}
         <span>{page?.status === "validated" ? t("validated") : t("draft")}</span>
       </div>
 
@@ -344,15 +354,22 @@ export function PageEditorPage() {
               </div>
 
               <p>{t("assets")}</p>
-              <input
-                type="file"
-                onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                  const f = e.target.files?.[0];
-                  if (f) onUpload(f).catch((err) => setError(err instanceof Error ? err.message : String(err)));
+              <form
+                className="row"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  loadAssets(assetSearch).catch((err) => setError(err instanceof Error ? err.message : String(err)));
                 }}
-              />
+              >
+                <input
+                  value={assetSearch}
+                  onChange={(e) => setAssetSearch(e.target.value)}
+                  placeholder={t("search_assets")}
+                />
+                <button>{t("search")}</button>
+              </form>
               <div className="asset-grid">
-                {assets.map((asset) => (
+                {filteredAssets.map((asset) => (
                   <button key={asset.id} onClick={() => onSelectAsset(asset.id)}>
                     {asset.name}
                   </button>

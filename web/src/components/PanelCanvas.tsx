@@ -1,4 +1,5 @@
 import { CSSProperties, MouseEvent } from "react";
+import { resolveMediaUrl } from "../services/media";
 import { Asset, Panel, Slot, TextBlock } from "../types";
 
 type Props = {
@@ -32,7 +33,7 @@ export function PanelCanvas({ panel, slot, asset, textBlocks, mode, active = fal
 
   const bgStyle: CSSProperties = asset
     ? {
-        backgroundImage: `url(${asset.file_path})`,
+        backgroundImage: `url(${resolveMediaUrl(asset.file_path)})`,
         backgroundRepeat: "no-repeat",
         backgroundSize: `${zoom * 100}% ${zoom * 100}%`,
         backgroundPosition: `${50 + offsetX * 50}% ${50 + offsetY * 50}%`,

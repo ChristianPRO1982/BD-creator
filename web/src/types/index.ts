@@ -46,6 +46,7 @@ export type TextBlock = {
 
 export type Asset = {
   id: string;
+  comic_id: string;
   user_id: string;
   name: string;
   file_path: string;

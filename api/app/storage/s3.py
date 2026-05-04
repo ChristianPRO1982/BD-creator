@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+from urllib.parse import urlparse
 
 import boto3
 from botocore.client import Config
@@ -33,8 +34,22 @@ class S3Storage:
             key,
             ExtraArgs={"ContentType": content_type},
         )
-        endpoint = settings.s3_endpoint_url.rstrip("/")
+        endpoint = self._public_endpoint().rstrip("/")
         return f"{endpoint}/{settings.s3_bucket}/{key}"
+
+    def _public_endpoint(self) -> str:
+        configured = settings.s3_public_endpoint_url.strip()
+        if configured:
+            return configured
+
+        endpoint = settings.s3_endpoint_url.strip()
+        parsed = urlparse(endpoint)
+        # Dev convenience: docker-internal host `minio` is not reachable by the browser.
+        if parsed.hostname == "minio":
+            scheme = parsed.scheme or "http"
+            port = f":{parsed.port}" if parsed.port else ""
+            return f"{scheme}://localhost{port}"
+        return endpoint
 
 
 storage = S3Storage()

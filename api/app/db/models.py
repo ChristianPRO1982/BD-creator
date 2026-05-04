@@ -81,11 +81,13 @@ class Page(Base):
 class Asset(Base):
     __tablename__ = "assets"
     __table_args__ = (
+        Index("ix_assets_comic_id", "comic_id"),
         Index("ix_assets_user_id", "user_id"),
         {"schema": SCHEMA},
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    comic_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.comics.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_path: Mapped[str] = mapped_column(String(1024), nullable=False)

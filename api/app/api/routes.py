@@ -222,6 +222,13 @@ def update_panel(panel_id: uuid.UUID, payload: PanelUpdate, db: Session = Depend
         raise HTTPException(status_code=404, detail="Panel not found")
     if panel.page.status == "validated":
         raise HTTPException(status_code=409, detail="Cannot edit a validated page")
+    if payload.image_asset_id is not None:
+        asset = db.scalar(
+            select(Asset)
+            .where(Asset.id == payload.image_asset_id, Asset.comic_id == panel.page.comic_id)
+        )
+        if asset is None:
+            raise HTTPException(status_code=400, detail="Selected asset does not belong to this comic")
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(panel, key, value)
     invalidate_page_artifact(db, panel.page_id)
@@ -338,35 +345,44 @@ def delete_text_block(
     return {"ok": True}
 
 
-@router.post("/assets/upload", response_model=AssetOut)
-def upload_asset(
+@router.post("/comics/{comic_id}/assets/upload", response_model=AssetOut)
+def upload_comic_asset(
+    comic_id: uuid.UUID,
     file: UploadFile = File(...),
     name: str | None = Form(default=None),
     db: Session = Depends(get_db),
     user: AuthenticatedUser = Depends(require_user),
 ):
+    comic = db.scalar(select(Comic.id).where(Comic.id == comic_id, Comic.user_id == user.user_uuid))
+    if comic is None:
+        raise HTTPException(status_code=404, detail="Comic not found")
+
     storage.ensure_bucket()
     content = file.file.read()
     safe_name = name or file.filename or "asset"
 
-    count = db.scalar(select(func.count(Asset.id)).where(Asset.user_id == user.user_uuid)) or 0
-    key = f"users/{user.external_id}/assets/{count + 1}_{safe_name}"
+    count = db.scalar(select(func.count(Asset.id)).where(Asset.comic_id == comic_id)) or 0
+    key = f"comics/{comic_id}/assets/{count + 1}_{safe_name}"
     file_url = storage.upload_bytes(key, content, file.content_type or "application/octet-stream")
 
-    asset = Asset(user_id=user.user_uuid, name=safe_name, file_path=file_url)
+    asset = Asset(comic_id=comic_id, user_id=user.user_uuid, name=safe_name, file_path=file_url)
     db.add(asset)
     db.commit()
     db.refresh(asset)
     return asset
 
 
-@router.get("/assets", response_model=list[AssetOut])
-def list_assets(
+@router.get("/comics/{comic_id}/assets", response_model=list[AssetOut])
+def list_comic_assets(
+    comic_id: uuid.UUID,
     search: str | None = None,
     db: Session = Depends(get_db),
     user: AuthenticatedUser = Depends(require_user),
 ):
-    stmt = select(Asset).where(Asset.user_id == user.user_uuid)
+    comic = db.scalar(select(Comic.id).where(Comic.id == comic_id, Comic.user_id == user.user_uuid))
+    if comic is None:
+        raise HTTPException(status_code=404, detail="Comic not found")
+    stmt = select(Asset).where(Asset.comic_id == comic_id)
     if search:
         stmt = stmt.where(Asset.name.ilike(f"%{search}%"))
     return db.scalars(stmt.order_by(Asset.name.asc())).all()

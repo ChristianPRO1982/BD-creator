@@ -145,6 +145,7 @@ class TemplateOut(BaseModel):
 
 class AssetOut(BaseModel):
     id: uuid.UUID
+    comic_id: uuid.UUID
     user_id: uuid.UUID
     name: str
     file_path: str

@@ -37,11 +37,11 @@ export const api = {
   del: <T>(path: string) => call<T>(path, { method: "DELETE" }),
 };
 
-export async function uploadAsset(file: File, name?: string) {
+export async function uploadComicAsset(comicId: string, file: File, name?: string) {
   const form = new FormData();
   form.append("file", file);
   if (name) form.append("name", name);
-  const res = await fetch(`${API_BASE}/api/assets/upload`, {
+  const res = await fetch(`${API_BASE}/api/comics/${comicId}/assets/upload`, {
     method: "POST",
     credentials: "include",
     body: form,

@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     user_table: str = Field(default="users", alias="USER_TABLE")
 
     s3_endpoint_url: str = Field(default="http://minio:9000", alias="S3_ENDPOINT_URL")
+    s3_public_endpoint_url: str = Field(default="", alias="S3_PUBLIC_ENDPOINT_URL")
     s3_region: str = Field(default="us-east-1", alias="S3_REGION")
     s3_access_key: str = Field(default="minioadmin", alias="S3_ACCESS_KEY")
     s3_secret_key: str = Field(default="minioadmin", alias="S3_SECRET_KEY")

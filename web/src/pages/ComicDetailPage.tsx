@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useI18n } from "../contexts/LanguageContext";
 import { api } from "../services/api";
+import { resolveMediaUrl } from "../services/media";
 import { Comic, Page, Template } from "../types";
 
 type ComicRouteState = {
@@ -59,6 +60,7 @@ export function ComicDetailPage() {
         <input type="number" value={pageNumber} onChange={(e) => setPageNumber(Number(e.target.value))} min={1} />
         <button>{t("new_page")}</button>
         <button type="button" onClick={onRender}>{t("render_missing")}</button>
+        <Link to={`/comics/${comicId}/assets`}>{t("assets_bank")}</Link>
       </form>
       <ul className="list">
         {pages.map((page) => (
@@ -66,7 +68,7 @@ export function ComicDetailPage() {
             <Link to={`/pages/${page.id}`} state={{ comicId, comicName }}>
               #{page.page_number} - {page.status}
             </Link>
-            {page.rendered_image_url ? <a href={page.rendered_image_url} target="_blank">JPEG</a> : null}
+            {page.rendered_image_url ? <a href={resolveMediaUrl(page.rendered_image_url)} target="_blank">JPEG</a> : null}
           </li>
         ))}
       </ul>
