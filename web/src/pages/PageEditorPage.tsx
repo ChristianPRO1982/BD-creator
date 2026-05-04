@@ -239,22 +239,22 @@ export function PageEditorPage() {
     }
   }
 
-  async function onUpdateText(textBlockId: string, patch: Partial<TextBlock>) {
+  async function onUpdateText(textBlockId: string) {
     if (!activePanel || !page || page.status === "validated") return;
     const current = (textBlocksByPanelId[activePanel.id] || []).find((tb) => tb.id === textBlockId);
     if (!current) return;
 
     const body = {
-      content: patch.content ?? current.content,
-      x: patch.x ?? current.x,
-      y: patch.y ?? current.y,
-      width: patch.width ?? current.width,
-      height: patch.height ?? current.height,
-      font_size: patch.font_size ?? current.font_size,
-      bubble_style: patch.bubble_style ?? current.bubble_style,
-      text_color: patch.text_color ?? current.text_color,
-      background_color: patch.background_color ?? current.background_color,
-      background_opacity: patch.background_opacity ?? current.background_opacity,
+      content: current.content,
+      x: current.x,
+      y: current.y,
+      width: current.width,
+      height: current.height,
+      font_size: current.font_size,
+      bubble_style: current.bubble_style,
+      text_color: current.text_color,
+      background_color: current.background_color,
+      background_opacity: current.background_opacity,
     };
 
     try {
@@ -521,7 +521,7 @@ export function PageEditorPage() {
                         <input type="number" step="0.1" min={0} max={1} value={tb.background_opacity} onChange={(e) => onTextFieldChange(tb.id, "background_opacity", Number(e.target.value))} />
                       </div>
                       <div className="row wrap">
-                        <button onClick={() => onUpdateText(tb.id, tb)}>{t("save")}</button>
+                        <button onClick={() => onUpdateText(tb.id)}>{t("save")}</button>
                         <button onClick={() => onDeleteText(tb.id)}>{t("delete")}</button>
                       </div>
                     </div>
