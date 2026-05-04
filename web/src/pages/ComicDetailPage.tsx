@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useI18n } from "../contexts/LanguageContext";
 import { api } from "../services/api";
 import { resolveMediaUrl } from "../services/media";
@@ -12,6 +12,7 @@ type ComicRouteState = {
 
 export function ComicDetailPage() {
   const { comicId } = useParams<{ comicId: string }>();
+  const navigate = useNavigate();
   const location = useLocation();
   const routeState = (location.state as ComicRouteState | null) ?? null;
   const { t } = useI18n();
@@ -20,6 +21,8 @@ export function ComicDetailPage() {
   const [comicName, setComicName] = useState<string>(routeState?.comicName ?? "");
   const [templateId, setTemplateId] = useState<number>(1);
   const [pageNumber, setPageNumber] = useState<number>(1);
+  const [deleteToken, setDeleteToken] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function load() {
     const [pageData, templateData, comicData] = await Promise.all([
@@ -48,6 +51,19 @@ export function ComicDetailPage() {
     await load();
   }
 
+  async function onDeleteComic() {
+    if (!comicId) return;
+    setDeleteError(null);
+    if (deleteToken !== "delete") {
+      setDeleteError("Type exactement: delete");
+      return;
+    }
+    const confirmed = window.confirm(`delete "${comicName || comicId}" ?`);
+    if (!confirmed) return;
+    await api.del(`/api/comics/${comicId}`);
+    navigate("/");
+  }
+
   return (
     <section className="card">
       <h2>{t("pages")}</h2>
@@ -72,6 +88,16 @@ export function ComicDetailPage() {
           </li>
         ))}
       </ul>
+      <hr />
+      <div className="row wrap">
+        <strong>{t("delete_comic")}</strong>
+        <span>{t("delete_comic_hint")}</span>
+      </div>
+      <div className="row wrap">
+        <input value={deleteToken} onChange={(e) => setDeleteToken(e.target.value)} placeholder="delete" />
+        <button type="button" onClick={onDeleteComic}>{t("delete_comic")}</button>
+      </div>
+      {deleteError ? <p className="error-text">{deleteError}</p> : null}
     </section>
   );
 }

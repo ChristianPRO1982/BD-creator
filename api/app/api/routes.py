@@ -82,6 +82,16 @@ def delete_comic(comic_id: uuid.UUID, db: Session = Depends(get_db), user: Authe
     comic = db.scalar(select(Comic).where(Comic.id == comic_id, Comic.user_id == user.user_uuid))
     if comic is None:
         raise HTTPException(status_code=404, detail="Comic not found")
+    comic_assets = db.scalars(select(Asset).where(Asset.comic_id == comic_id)).all()
+    for asset in comic_assets:
+        key = storage.key_from_url(asset.file_path)
+        if not key:
+            continue
+        try:
+            storage.delete_object(key)
+        except Exception:
+            # Keep DB deletion as source of truth even if object storage cleanup fails.
+            pass
     db.delete(comic)
     db.commit()
     return {"ok": True}

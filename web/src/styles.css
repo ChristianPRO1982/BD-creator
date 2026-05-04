@@ -167,6 +167,11 @@ select option {
 .panel-canvas-bg {
   position: absolute;
   inset: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .panel-canvas-overlay {

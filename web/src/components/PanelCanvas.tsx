@@ -31,14 +31,17 @@ export function PanelCanvas({ panel, slot, asset, textBlocks, mode, active = fal
   const offsetX = clamp(panel.crop_offset_x || 0, -1, 1);
   const offsetY = clamp(panel.crop_offset_y || 0, -1, 1);
 
-  const bgStyle: CSSProperties = asset
-    ? {
-        backgroundImage: `url(${assetContentUrl(asset.id)})`,
-        backgroundRepeat: "no-repeat",
-        backgroundSize: `${zoom * 100}% ${zoom * 100}%`,
-        backgroundPosition: `${50 + offsetX * 50}% ${50 + offsetY * 50}%`,
-      }
-    : { background: "linear-gradient(120deg, #ece9e0, #f8f8f8)" };
+  const imageStyle: CSSProperties = {
+    width: "auto",
+    height: "100%",
+    maxWidth: "none",
+    maxHeight: "none",
+    objectFit: "contain",
+    transform: `translate(${offsetX * 50}%, ${offsetY * 50}%) scale(${zoom})`,
+    transformOrigin: "center center",
+    pointerEvents: "none",
+    userSelect: "none",
+  };
 
   return (
     <div
@@ -58,7 +61,9 @@ export function PanelCanvas({ panel, slot, asset, textBlocks, mode, active = fal
         }
       }}
     >
-      <div className="panel-canvas-bg" style={bgStyle} />
+      <div className="panel-canvas-bg">
+        {asset ? <img src={assetContentUrl(asset.id)} alt="" style={imageStyle} draggable={false} /> : null}
+      </div>
       <div className="panel-canvas-overlay">
         {textBlocks.map((tb) => (
           <div
