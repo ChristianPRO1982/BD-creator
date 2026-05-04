@@ -41,7 +41,7 @@ def _bubble_style_css(style: str) -> str:
     if tail == "tail_bottom_right":
         css += "border-bottom-right-radius:0px;"
     if thought:
-        css += "background:transparent;border:2px dashed rgba(0,0,0,0.75);"
+        css += "border:2px dashed rgba(0,0,0,0.75);"
     return css
 
 

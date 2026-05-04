@@ -53,8 +53,6 @@ function bubbleStyleToCss(style: string): CSSProperties {
   if (parsed.tail === "tail_bottom_left") css.borderBottomLeftRadius = "0px";
   if (parsed.tail === "tail_bottom_right") css.borderBottomRightRadius = "0px";
   if (parsed.thought) {
-    css.backgroundColor = "transparent";
-    css.background = "transparent";
     return {
       ...css,
       borderStyle: "dashed",
