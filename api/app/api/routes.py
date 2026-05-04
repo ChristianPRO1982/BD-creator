@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
@@ -17,13 +18,22 @@ from app.api.schemas import (
     PageUpdate,
     PanelOut,
     PanelUpdate,
+    TemplateGroupCreate,
+    TemplateGroupOut,
+    TemplateGroupUpdate,
     TemplateOut,
     TextBlockCreate,
     TextBlockOut,
     TextBlockUpdate,
 )
-from app.api.utils import invalidate_page_artifact, validate_hex_color, validate_opacity, validate_text_bounds
-from app.db.models import Asset, Comic, Page, Panel, Slot, Template, TextBlock
+from app.api.utils import (
+    invalidate_page_artifact,
+    validate_hex_color,
+    validate_opacity,
+    validate_template_payload,
+    validate_text_bounds,
+)
+from app.db.models import Asset, Comic, Page, Panel, Slot, Template, TemplateGroup, TextBlock
 from app.db.session import get_db
 from app.render.service import render_missing_artifacts
 from app.storage.s3 import storage
@@ -33,7 +43,181 @@ router = APIRouter(prefix="/api")
 
 @router.get("/templates", response_model=list[TemplateOut])
 def list_templates(db: Session = Depends(get_db), _: AuthenticatedUser = Depends(require_user)):
-    return db.scalars(select(Template).options(joinedload(Template.slots)).order_by(Template.id)).unique().all()
+    templates = db.scalars(
+        select(Template)
+        .options(joinedload(Template.slots), joinedload(Template.group).joinedload(TemplateGroup.parent))
+        .order_by(Template.sort_order, Template.name, Template.id)
+    ).unique().all()
+    return [
+        TemplateOut(
+            id=template.id,
+            name=template.name,
+            columns=template.columns,
+            rows=template.rows,
+            group_id=template.group_id,
+            group_name=template.group.name,
+            parent_group_id=template.group.parent_id,
+            parent_group_name=template.group.parent.name if template.group.parent is not None else None,
+            source_filename=template.source_filename,
+            installed_at=template.installed_at,
+            sort_order=template.sort_order,
+            slots=template.slots,
+        )
+        for template in templates
+    ]
+
+
+@router.get("/template-groups", response_model=list[TemplateGroupOut])
+def list_template_groups(db: Session = Depends(get_db), _: AuthenticatedUser = Depends(require_user)):
+    return db.scalars(
+        select(TemplateGroup).order_by(TemplateGroup.parent_id.nullsfirst(), TemplateGroup.sort_order, TemplateGroup.name, TemplateGroup.id)
+    ).all()
+
+
+@router.post("/template-groups", response_model=TemplateGroupOut)
+def create_template_group(
+    payload: TemplateGroupCreate,
+    db: Session = Depends(get_db),
+    _: AuthenticatedUser = Depends(require_user),
+):
+    if payload.parent_id is not None:
+        parent = db.get(TemplateGroup, payload.parent_id)
+        if parent is None:
+            raise HTTPException(status_code=400, detail="Parent group not found")
+        if parent.parent_id is not None:
+            raise HTTPException(status_code=400, detail="A subgroup cannot contain another subgroup")
+    group = TemplateGroup(name=payload.name.strip(), parent_id=payload.parent_id, sort_order=payload.sort_order)
+    db.add(group)
+    db.commit()
+    db.refresh(group)
+    return group
+
+
+@router.patch("/template-groups/{group_id}", response_model=TemplateGroupOut)
+def update_template_group(
+    group_id: int,
+    payload: TemplateGroupUpdate,
+    db: Session = Depends(get_db),
+    _: AuthenticatedUser = Depends(require_user),
+):
+    group = db.get(TemplateGroup, group_id)
+    if group is None:
+        raise HTTPException(status_code=404, detail="Template group not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "name" in data and data["name"] is not None:
+        group.name = data["name"].strip()
+    if "sort_order" in data and data["sort_order"] is not None:
+        group.sort_order = data["sort_order"]
+    db.add(group)
+    db.commit()
+    db.refresh(group)
+    return group
+
+
+@router.delete("/template-groups/{group_id}")
+def delete_template_group(group_id: int, db: Session = Depends(get_db), _: AuthenticatedUser = Depends(require_user)):
+    group = db.get(TemplateGroup, group_id)
+    if group is None:
+        raise HTTPException(status_code=404, detail="Template group not found")
+    if group.parent_id is None:
+        subgroups_count = db.scalar(select(func.count()).select_from(TemplateGroup).where(TemplateGroup.parent_id == group_id)) or 0
+        if subgroups_count > 0:
+            raise HTTPException(status_code=409, detail="Impossible de supprimer ce groupe : il contient des sous-groupes.")
+    else:
+        templates_count = db.scalar(select(func.count()).select_from(Template).where(Template.group_id == group_id)) or 0
+        if templates_count > 0:
+            raise HTTPException(status_code=409, detail="Impossible de supprimer ce sous-groupe : il contient des gabarits.")
+    db.delete(group)
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/templates/install", response_model=TemplateOut)
+async def install_template(
+    group_id: int = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: AuthenticatedUser = Depends(require_user),
+):
+    group = db.get(TemplateGroup, group_id)
+    if group is None:
+        raise HTTPException(status_code=400, detail="Invalid group_id")
+    if group.parent_id is None:
+        raise HTTPException(status_code=400, detail="group_id must reference a subgroup")
+
+    raw = await file.read()
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid JSON template file") from exc
+
+    try:
+        name, columns, rows, slots = validate_template_payload(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    next_sort_order = (db.scalar(select(func.coalesce(func.max(Template.sort_order), 0)).where(Template.group_id == group_id)) or 0) + 1
+    template = Template(
+        group_id=group_id,
+        name=name,
+        columns=columns,
+        rows=rows,
+        source_filename=file.filename or "template.json",
+        sort_order=next_sort_order,
+    )
+    db.add(template)
+    db.flush()
+
+    for slot in slots:
+        db.add(
+            Slot(
+                template_id=template.id,
+                col_start=int(slot["col_start"]),
+                row_start=int(slot["row_start"]),
+                col_span=int(slot["col_span"]),
+                row_span=int(slot["row_span"]),
+                geometry_type=str(slot["geometry_type"]),
+            )
+        )
+
+    db.commit()
+    db.refresh(template)
+    template = db.scalar(
+        select(Template)
+        .where(Template.id == template.id)
+        .options(joinedload(Template.slots), joinedload(Template.group).joinedload(TemplateGroup.parent))
+    )
+    assert template is not None
+    return TemplateOut(
+        id=template.id,
+        name=template.name,
+        columns=template.columns,
+        rows=template.rows,
+        group_id=template.group_id,
+        group_name=template.group.name,
+        parent_group_id=template.group.parent_id,
+        parent_group_name=template.group.parent.name if template.group.parent is not None else None,
+        source_filename=template.source_filename,
+        installed_at=template.installed_at,
+        sort_order=template.sort_order,
+        slots=template.slots,
+    )
+
+
+@router.delete("/templates/{template_id}")
+def delete_template(template_id: int, db: Session = Depends(get_db), _: AuthenticatedUser = Depends(require_user)):
+    template = db.get(Template, template_id)
+    if template is None:
+        raise HTTPException(status_code=404, detail="Template not found")
+    in_use = db.scalar(select(func.count()).select_from(Page).where(Page.template_id == template_id)) or 0
+    if in_use > 0:
+        raise HTTPException(
+            status_code=409,
+            detail="Impossible de supprimer ce gabarit : il est utilisé par une ou plusieurs planches.",
+        )
+    db.delete(template)
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/comics", response_model=list[ComicOut])

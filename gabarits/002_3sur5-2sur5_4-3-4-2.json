@@ -1,0 +1,23 @@
+{
+  "name": "3/5 + 2/5 - 4/3/4/2",
+  "columns": 12,
+  "rows": 5,
+  "slots": [
+    { "col_start": 1, "row_start": 1, "col_span": 3, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 4, "row_start": 1, "col_span": 3, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 7, "row_start": 1, "col_span": 3, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 10, "row_start": 1, "col_span": 3, "row_span": 1, "geometry_type": "rectangle" },
+
+    { "col_start": 1, "row_start": 2, "col_span": 4, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 5, "row_start": 2, "col_span": 4, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 9, "row_start": 2, "col_span": 4, "row_span": 1, "geometry_type": "rectangle" },
+
+    { "col_start": 1, "row_start": 3, "col_span": 3, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 4, "row_start": 3, "col_span": 3, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 7, "row_start": 3, "col_span": 3, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 10, "row_start": 3, "col_span": 3, "row_span": 1, "geometry_type": "rectangle" },
+
+    { "col_start": 1, "row_start": 4, "col_span": 6, "row_span": 2, "geometry_type": "rectangle" },
+    { "col_start": 7, "row_start": 4, "col_span": 6, "row_span": 2, "geometry_type": "rectangle" }
+  ]
+}

@@ -42,6 +42,16 @@ export const messages: Record<Lang, Record<string, string>> = {
     theme_system: "Comme le navigateur",
     language: "Langue",
     logout: "Se déconnecter"
+    ,
+    template_management: "Gestion des gabarits",
+    template_groups: "Groupes de gabarits",
+    new_top_group: "Nouveau groupe général",
+    new_subgroup: "Nouveau sous-groupe",
+    rename: "Renommer",
+    install_template: "Installer un gabarit",
+    install: "Installer",
+    templates: "Gabarits",
+    back_home: "Retour accueil"
   },
   en: {
     app_title: "BD Creator",
@@ -83,6 +93,15 @@ export const messages: Record<Lang, Record<string, string>> = {
     theme_black: "Black",
     theme_system: "Browser",
     language: "Language",
-    logout: "Logout"
+    logout: "Logout",
+    template_management: "Template management",
+    template_groups: "Template groups",
+    new_top_group: "New top-level group",
+    new_subgroup: "New subgroup",
+    rename: "Rename",
+    install_template: "Install template",
+    install: "Install",
+    templates: "Templates",
+    back_home: "Back home"
   }
 };

@@ -67,5 +67,20 @@ export type Template = {
   name: string;
   columns: number;
   rows: number;
+  group_id: number;
+  group_name: string;
+  parent_group_id: number | null;
+  parent_group_name: string | null;
+  source_filename: string;
+  installed_at: string;
+  sort_order: number;
   slots: Slot[];
+};
+
+export type TemplateGroup = {
+  id: number;
+  parent_id: number | null;
+  name: string;
+  sort_order: number;
+  created_at: string;
 };

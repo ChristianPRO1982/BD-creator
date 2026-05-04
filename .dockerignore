@@ -1,0 +1,43 @@
+# VCS
+.git
+.gitignore
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+
+# Python cache / virtual env
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node artifacts
+node_modules/
+web/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build and tooling outputs
+dist/
+build/
+coverage/
+.cache/
+
+# Editors / OS noise
+.DS_Store
+.idea/
+.vscode/
+
+# Project docs and local notes (not needed in container images)
+docs/
+illustrations/
+gabarits/

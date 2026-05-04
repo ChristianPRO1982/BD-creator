@@ -1,0 +1,30 @@
+{
+  "name": "5 lignes egales - 5/3/4/3/4",
+  "columns": 60,
+  "rows": 5,
+  "slots": [
+    { "col_start": 1, "row_start": 1, "col_span": 12, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 13, "row_start": 1, "col_span": 12, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 25, "row_start": 1, "col_span": 12, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 37, "row_start": 1, "col_span": 12, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 49, "row_start": 1, "col_span": 12, "row_span": 1, "geometry_type": "rectangle" },
+
+    { "col_start": 1, "row_start": 2, "col_span": 20, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 21, "row_start": 2, "col_span": 20, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 41, "row_start": 2, "col_span": 20, "row_span": 1, "geometry_type": "rectangle" },
+
+    { "col_start": 1, "row_start": 3, "col_span": 15, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 16, "row_start": 3, "col_span": 15, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 31, "row_start": 3, "col_span": 15, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 46, "row_start": 3, "col_span": 15, "row_span": 1, "geometry_type": "rectangle" },
+
+    { "col_start": 1, "row_start": 4, "col_span": 20, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 21, "row_start": 4, "col_span": 20, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 41, "row_start": 4, "col_span": 20, "row_span": 1, "geometry_type": "rectangle" },
+
+    { "col_start": 1, "row_start": 5, "col_span": 15, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 16, "row_start": 5, "col_span": 15, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 31, "row_start": 5, "col_span": 15, "row_span": 1, "geometry_type": "rectangle" },
+    { "col_start": 46, "row_start": 5, "col_span": 15, "row_span": 1, "geometry_type": "rectangle" }
+  ]
+}

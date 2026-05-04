@@ -137,7 +137,36 @@ class TemplateOut(BaseModel):
     name: str
     columns: int
     rows: int
+    group_id: int
+    group_name: str
+    parent_group_id: int | None
+    parent_group_name: str | None
+    source_filename: str
+    installed_at: dt.datetime
+    sort_order: int
     slots: list[TemplateSlotOut]
+
+    class Config:
+        from_attributes = True
+
+
+class TemplateGroupCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    parent_id: int | None = None
+    sort_order: int = 0
+
+
+class TemplateGroupUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    sort_order: int | None = None
+
+
+class TemplateGroupOut(BaseModel):
+    id: int
+    parent_id: int | None
+    name: str
+    sort_order: int
+    created_at: dt.datetime
 
     class Config:
         from_attributes = True

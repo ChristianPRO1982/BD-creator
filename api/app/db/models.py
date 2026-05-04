@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,11 +35,34 @@ class Template(Base):
     __table_args__ = ({"schema": SCHEMA},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    group_id: Mapped[int] = mapped_column(ForeignKey(f"{SCHEMA}.template_groups.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
     columns: Mapped[int] = mapped_column(Integer, nullable=False)
     rows: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    installed_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=dt.datetime.utcnow, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
+    group: Mapped[TemplateGroup] = relationship(back_populates="templates")
     slots: Mapped[list[Slot]] = relationship(back_populates="template", cascade="all, delete-orphan")
+
+
+class TemplateGroup(Base):
+    __tablename__ = "template_groups"
+    __table_args__ = (
+        Index("ix_template_groups_parent_id", "parent_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey(f"{SCHEMA}.template_groups.id", ondelete="RESTRICT"), nullable=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=dt.datetime.utcnow, nullable=False)
+
+    parent: Mapped[TemplateGroup | None] = relationship(remote_side=[id], back_populates="children")
+    children: Mapped[list[TemplateGroup]] = relationship(back_populates="parent")
+    templates: Mapped[list[Template]] = relationship(back_populates="group")
 
 
 class Slot(Base):

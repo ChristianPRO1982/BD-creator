@@ -37,6 +37,23 @@ export const api = {
   del: <T>(path: string) => call<T>(path, { method: "DELETE" }),
 };
 
+export async function postForm<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  if (res.status === 401) {
+    window.location.href = LOGIN_URL;
+    throw new Error("unauthorized");
+  }
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({}));
+    throw new Error(payload.detail || "API error");
+  }
+  return res.json();
+}
+
 export async function uploadComicAsset(comicId: string, file: File, name?: string) {
   const form = new FormData();
   form.append("file", file);
