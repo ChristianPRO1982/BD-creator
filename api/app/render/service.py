@@ -20,18 +20,29 @@ def _hex_to_rgba(color: str, opacity: float) -> str:
     return f"rgba({r}, {g}, {b}, {opacity:.3f})"
 
 
+def _parse_bubble_style(style: str) -> tuple[bool, str]:
+    raw = (style or "none").strip()
+    parts = [p.strip() for p in raw.split("|") if p.strip()]
+    thought = "thought" in parts
+    allowed = {"tail_top_left", "tail_top_right", "tail_bottom_left", "tail_bottom_right"}
+    tail = next((p for p in parts if p in allowed), raw if raw in allowed else "none")
+    return thought, tail
+
+
 def _bubble_style_css(style: str) -> str:
-    if style == "tail_top_left":
-        return "border-top-left-radius:0px;"
-    if style == "tail_top_right":
-        return "border-top-right-radius:0px;"
-    if style == "tail_bottom_left":
-        return "border-bottom-left-radius:0px;"
-    if style == "tail_bottom_right":
-        return "border-bottom-right-radius:0px;"
-    if style == "thought":
-        return "border:2px dashed rgba(0,0,0,0.75);"
-    return ""
+    thought, tail = _parse_bubble_style(style)
+    css = ""
+    if tail == "tail_top_left":
+        css += "border-top-left-radius:0px;"
+    if tail == "tail_top_right":
+        css += "border-top-right-radius:0px;"
+    if tail == "tail_bottom_left":
+        css += "border-bottom-left-radius:0px;"
+    if tail == "tail_bottom_right":
+        css += "border-bottom-right-radius:0px;"
+    if thought:
+        css += "background:transparent;border:2px dashed rgba(0,0,0,0.75);"
+    return css
 
 
 def _page_html(page: Page, panels: list[Panel]) -> str:

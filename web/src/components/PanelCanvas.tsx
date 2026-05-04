@@ -28,19 +28,41 @@ function hexToRgba(color: string, opacity: number) {
   return `rgba(${r}, ${g}, ${b}, ${clamp(opacity, 0, 1)})`;
 }
 
+type BubbleParts = {
+  thought: boolean;
+  tail: "none" | "tail_top_left" | "tail_top_right" | "tail_bottom_left" | "tail_bottom_right";
+};
+
+function parseBubbleStyle(style: string): BubbleParts {
+  const raw = (style || "none").trim();
+  const parts = raw.split("|").map((p) => p.trim()).filter(Boolean);
+  const thought = parts.includes("thought");
+  const tail = (
+    parts.find((p) =>
+      ["tail_top_left", "tail_top_right", "tail_bottom_left", "tail_bottom_right"].includes(p)
+    ) || (["tail_top_left", "tail_top_right", "tail_bottom_left", "tail_bottom_right"].includes(raw) ? raw : "none")
+  ) as BubbleParts["tail"];
+  return { thought, tail };
+}
+
 function bubbleStyleToCss(style: string): CSSProperties {
-  if (style === "tail_top_left") return { borderTopLeftRadius: "0px" };
-  if (style === "tail_top_right") return { borderTopRightRadius: "0px" };
-  if (style === "tail_bottom_left") return { borderBottomLeftRadius: "0px" };
-  if (style === "tail_bottom_right") return { borderBottomRightRadius: "0px" };
-  if (style === "thought") {
+  const parsed = parseBubbleStyle(style);
+  const css: CSSProperties = {};
+  if (parsed.tail === "tail_top_left") css.borderTopLeftRadius = "0px";
+  if (parsed.tail === "tail_top_right") css.borderTopRightRadius = "0px";
+  if (parsed.tail === "tail_bottom_left") css.borderBottomLeftRadius = "0px";
+  if (parsed.tail === "tail_bottom_right") css.borderBottomRightRadius = "0px";
+  if (parsed.thought) {
+    css.backgroundColor = "transparent";
+    css.background = "transparent";
     return {
+      ...css,
       borderStyle: "dashed",
       borderWidth: "2px",
       borderColor: "rgba(0,0,0,0.75)",
     };
   }
-  return {};
+  return css;
 }
 
 export function PanelCanvas({

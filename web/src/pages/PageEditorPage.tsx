@@ -18,6 +18,28 @@ type DragState = {
   height: number;
 } | null;
 
+type BubbleTail = "none" | "tail_top_left" | "tail_top_right" | "tail_bottom_left" | "tail_bottom_right";
+
+function parseBubbleStyle(style: string): { thought: boolean; tail: BubbleTail } {
+  const raw = (style || "none").trim();
+  const parts = raw.split("|").map((p) => p.trim()).filter(Boolean);
+  const thought = parts.includes("thought");
+  const tail = (
+    parts.find((p) =>
+      ["tail_top_left", "tail_top_right", "tail_bottom_left", "tail_bottom_right"].includes(p)
+    ) || (["tail_top_left", "tail_top_right", "tail_bottom_left", "tail_bottom_right"].includes(raw) ? raw : "none")
+  ) as BubbleTail;
+  return { thought, tail };
+}
+
+function makeBubbleStyle(thought: boolean, tail: BubbleTail): string {
+  const parts: string[] = [];
+  if (thought) parts.push("thought");
+  if (tail !== "none") parts.push(tail);
+  if (!parts.length) return "none";
+  return parts.join("|");
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
@@ -195,6 +217,8 @@ export function PageEditorPage() {
     if (!activePanel || !page || page.status === "validated") return;
 
     const form = new FormData(e.currentTarget);
+    const bubbleTail = String(form.get("bubble_tail") || "none") as BubbleTail;
+    const bubbleKind = String(form.get("bubble_kind") || "normal");
     try {
       await api.post(`/api/panels/${activePanel.id}/text-blocks`, {
         content: String(form.get("content") || ""),
@@ -203,7 +227,7 @@ export function PageEditorPage() {
         width: Number(form.get("width") || 0.5),
         height: Number(form.get("height") || 0.2),
         font_size: Number(form.get("font_size") || 16),
-        bubble_style: String(form.get("bubble_style") || "speech"),
+        bubble_style: makeBubbleStyle(bubbleKind === "thought", bubbleTail),
         text_color: String(form.get("text_color") || "#000000"),
         background_color: String(form.get("background_color") || "#ffffff"),
         background_opacity: Number(form.get("background_opacity") || 1),
@@ -313,6 +337,22 @@ export function PageEditorPage() {
     }));
   }
 
+  function onBubbleThoughtChange(textBlockId: string, thought: boolean) {
+    if (!activePanel) return;
+    const current = (textBlocksByPanelId[activePanel.id] || []).find((tb) => tb.id === textBlockId);
+    if (!current) return;
+    const parsed = parseBubbleStyle(current.bubble_style);
+    onTextFieldChange(textBlockId, "bubble_style", makeBubbleStyle(thought, parsed.tail));
+  }
+
+  function onBubbleTailChange(textBlockId: string, tail: BubbleTail) {
+    if (!activePanel) return;
+    const current = (textBlocksByPanelId[activePanel.id] || []).find((tb) => tb.id === textBlockId);
+    if (!current) return;
+    const parsed = parseBubbleStyle(current.bubble_style);
+    onTextFieldChange(textBlockId, "bubble_style", makeBubbleStyle(parsed.thought, tail));
+  }
+
   function onDragStart(textBlock: TextBlock, event: MouseEvent<HTMLDivElement>) {
     if (!activePanel || !page || page.status === "validated") return;
     setDragState({
@@ -398,107 +438,120 @@ export function PageEditorPage() {
                   onTextDragStart={onDragStart}
                 />
               </div>
-
-              <p>{t("assets")}</p>
-              <form
-                className="row"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  loadAssets(assetSearch).catch((err) => setError(err instanceof Error ? err.message : String(err)));
-                }}
-              >
-                <input
-                  value={assetSearch}
-                  onChange={(e) => setAssetSearch(e.target.value)}
-                  placeholder={t("search_assets")}
-                />
-                <button>{t("search")}</button>
-              </form>
-              <div className={`asset-list ${assetsExpanded ? "expanded" : "collapsed"}`}>
-                {filteredAssets.map((asset) => (
-                  <div key={asset.id} className="asset-list-row">
-                    <button onClick={() => onSelectAsset(asset.id)}>
-                      {asset.name}
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="row">
-                <button type="button" onClick={() => setAssetsExpanded((prev) => !prev)}>
-                  {assetsExpanded ? t("shrink") : t("expand")}
-                </button>
-              </div>
-              <div className="row">
-                <button onClick={() => activePanel && updatePanel(activePanel.id, { image_asset_id: null })}>
-                  {t("remove_image")}
-                </button>
-              </div>
-
-              <p>{t("crop_controls")}</p>
-              <div className="row wrap">
-                <button onClick={() => onCrop("zoom_in")}>Zoom +</button>
-                <button onClick={() => onCrop("zoom_out")}>Zoom -</button>
-                <button onClick={() => onCrop("left")}>◀</button>
-                <button onClick={() => onCrop("right")}>▶</button>
-                <button onClick={() => onCrop("up")}>▲</button>
-                <button onClick={() => onCrop("down")}>▼</button>
-                <button onClick={() => onCrop("reset")}>{t("reset")}</button>
-              </div>
-
-              <p>{t("text_blocks")}</p>
-              <div className="text-block-list">
-                {activeTextBlocks.map((tb) => (
-                  <div className="text-block-editor" key={tb.id}>
-                    <textarea
-                      value={tb.content}
-                      onChange={(e) => onTextFieldChange(tb.id, "content", e.target.value)}
-                    />
-                    <div className="row wrap">
-                      <input type="number" step="0.01" value={tb.x} onChange={(e) => onTextFieldChange(tb.id, "x", Number(e.target.value))} />
-                      <input type="number" step="0.01" value={tb.y} onChange={(e) => onTextFieldChange(tb.id, "y", Number(e.target.value))} />
-                      <input type="number" step="0.01" min={0.01} max={1} value={tb.width} onChange={(e) => onTextFieldChange(tb.id, "width", Number(e.target.value))} />
-                      <input type="number" step="0.01" min={0.01} max={1} value={tb.height} onChange={(e) => onTextFieldChange(tb.id, "height", Number(e.target.value))} />
-                      <input type="number" min={8} max={72} value={tb.font_size} onChange={(e) => onTextFieldChange(tb.id, "font_size", Number(e.target.value))} />
-                      <select value={tb.bubble_style} onChange={(e) => onTextFieldChange(tb.id, "bubble_style", e.target.value)}>
-                        <option value="none">Sans flèche</option>
-                        <option value="tail_top_left">Flèche coin haut gauche</option>
-                        <option value="tail_top_right">Flèche coin haut droit</option>
-                        <option value="tail_bottom_left">Flèche coin bas gauche</option>
-                        <option value="tail_bottom_right">Flèche coin bas droit</option>
-                        <option value="thought">Pensée (pointillé)</option>
-                      </select>
-                      <input value={tb.text_color} onChange={(e) => onTextFieldChange(tb.id, "text_color", e.target.value)} />
-                      <input value={tb.background_color} onChange={(e) => onTextFieldChange(tb.id, "background_color", e.target.value)} />
-                      <input type="number" step="0.1" min={0} max={1} value={tb.background_opacity} onChange={(e) => onTextFieldChange(tb.id, "background_opacity", Number(e.target.value))} />
+              <div className="editor-controls-scroll">
+                <p>{t("assets")}</p>
+                <form
+                  className="row"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    loadAssets(assetSearch).catch((err) => setError(err instanceof Error ? err.message : String(err)));
+                  }}
+                >
+                  <input
+                    value={assetSearch}
+                    onChange={(e) => setAssetSearch(e.target.value)}
+                    placeholder={t("search_assets")}
+                  />
+                  <button>{t("search")}</button>
+                </form>
+                <div className={`asset-list ${assetsExpanded ? "expanded" : "collapsed"}`}>
+                  {filteredAssets.map((asset) => (
+                    <div key={asset.id} className="asset-list-row">
+                      <button onClick={() => onSelectAsset(asset.id)}>
+                        {asset.name}
+                      </button>
                     </div>
-                    <div className="row wrap">
-                      <button onClick={() => onUpdateText(tb.id, tb)}>{t("save")}</button>
-                      <button onClick={() => onDeleteText(tb.id)}>{t("delete")}</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                <div className="row">
+                  <button type="button" onClick={() => setAssetsExpanded((prev) => !prev)}>
+                    {assetsExpanded ? t("shrink") : t("expand")}
+                  </button>
+                </div>
+                <div className="row">
+                  <button onClick={() => activePanel && updatePanel(activePanel.id, { image_asset_id: null })}>
+                    {t("remove_image")}
+                  </button>
+                </div>
 
-              <form className="row wrap" onSubmit={onAddText}>
-                <input name="content" placeholder="content" required />
-                <input name="x" type="number" step="0.01" defaultValue={0.1} min={0} max={1} />
-                <input name="y" type="number" step="0.01" defaultValue={0.1} min={0} max={1} />
-                <input name="width" type="number" step="0.01" defaultValue={0.5} min={0.01} max={1} />
-                <input name="height" type="number" step="0.01" defaultValue={0.2} min={0.01} max={1} />
-                <input name="font_size" type="number" defaultValue={16} min={8} max={72} />
-                <select name="bubble_style" defaultValue="none">
-                  <option value="none">Sans flèche</option>
-                  <option value="tail_top_left">Flèche coin haut gauche</option>
-                  <option value="tail_top_right">Flèche coin haut droit</option>
-                  <option value="tail_bottom_left">Flèche coin bas gauche</option>
-                  <option value="tail_bottom_right">Flèche coin bas droit</option>
-                  <option value="thought">Pensée (pointillé)</option>
-                </select>
-                <input name="text_color" defaultValue="#000000" />
-                <input name="background_color" defaultValue="#ffffff" />
-                <input name="background_opacity" type="number" step="0.1" min={0} max={1} defaultValue={1} />
-                <button>{t("add_text")}</button>
-              </form>
+                <p>{t("crop_controls")}</p>
+                <div className="row wrap">
+                  <button onClick={() => onCrop("zoom_in")}>Zoom +</button>
+                  <button onClick={() => onCrop("zoom_out")}>Zoom -</button>
+                  <button onClick={() => onCrop("left")}>◀</button>
+                  <button onClick={() => onCrop("right")}>▶</button>
+                  <button onClick={() => onCrop("up")}>▲</button>
+                  <button onClick={() => onCrop("down")}>▼</button>
+                  <button onClick={() => onCrop("reset")}>{t("reset")}</button>
+                </div>
+
+                <p>{t("text_blocks")}</p>
+                <div className="text-block-list">
+                  {activeTextBlocks.map((tb) => (
+                    <div className="text-block-editor" key={tb.id}>
+                      <textarea
+                        value={tb.content}
+                        onChange={(e) => onTextFieldChange(tb.id, "content", e.target.value)}
+                      />
+                      <div className="row wrap">
+                        <input type="number" step="0.01" value={tb.x} onChange={(e) => onTextFieldChange(tb.id, "x", Number(e.target.value))} />
+                        <input type="number" step="0.01" value={tb.y} onChange={(e) => onTextFieldChange(tb.id, "y", Number(e.target.value))} />
+                        <input type="number" step="0.01" min={0.01} max={1} value={tb.width} onChange={(e) => onTextFieldChange(tb.id, "width", Number(e.target.value))} />
+                        <input type="number" step="0.01" min={0.01} max={1} value={tb.height} onChange={(e) => onTextFieldChange(tb.id, "height", Number(e.target.value))} />
+                        <input type="number" min={8} max={72} value={tb.font_size} onChange={(e) => onTextFieldChange(tb.id, "font_size", Number(e.target.value))} />
+                        <select
+                          value={parseBubbleStyle(tb.bubble_style).tail}
+                          onChange={(e) => onBubbleTailChange(tb.id, e.target.value as BubbleTail)}
+                        >
+                          <option value="none">Sans flèche</option>
+                          <option value="tail_top_left">Flèche coin haut gauche</option>
+                          <option value="tail_top_right">Flèche coin haut droit</option>
+                          <option value="tail_bottom_left">Flèche coin bas gauche</option>
+                          <option value="tail_bottom_right">Flèche coin bas droit</option>
+                        </select>
+                        <select
+                          value={parseBubbleStyle(tb.bubble_style).thought ? "thought" : "normal"}
+                          onChange={(e) => onBubbleThoughtChange(tb.id, e.target.value === "thought")}
+                        >
+                          <option value="normal">Bulle normale</option>
+                          <option value="thought">Pensée (pointillé)</option>
+                        </select>
+                        <input value={tb.text_color} onChange={(e) => onTextFieldChange(tb.id, "text_color", e.target.value)} />
+                        <input value={tb.background_color} onChange={(e) => onTextFieldChange(tb.id, "background_color", e.target.value)} />
+                        <input type="number" step="0.1" min={0} max={1} value={tb.background_opacity} onChange={(e) => onTextFieldChange(tb.id, "background_opacity", Number(e.target.value))} />
+                      </div>
+                      <div className="row wrap">
+                        <button onClick={() => onUpdateText(tb.id, tb)}>{t("save")}</button>
+                        <button onClick={() => onDeleteText(tb.id)}>{t("delete")}</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <form className="row wrap" onSubmit={onAddText}>
+                  <input name="content" placeholder="content" required />
+                  <input name="x" type="number" step="0.01" defaultValue={0.1} min={0} max={1} />
+                  <input name="y" type="number" step="0.01" defaultValue={0.1} min={0} max={1} />
+                  <input name="width" type="number" step="0.01" defaultValue={0.5} min={0.01} max={1} />
+                  <input name="height" type="number" step="0.01" defaultValue={0.2} min={0.01} max={1} />
+                  <input name="font_size" type="number" defaultValue={16} min={8} max={72} />
+                  <select name="bubble_tail" defaultValue="none">
+                    <option value="none">Sans flèche</option>
+                    <option value="tail_top_left">Flèche coin haut gauche</option>
+                    <option value="tail_top_right">Flèche coin haut droit</option>
+                    <option value="tail_bottom_left">Flèche coin bas gauche</option>
+                    <option value="tail_bottom_right">Flèche coin bas droit</option>
+                  </select>
+                  <select name="bubble_kind" defaultValue="normal">
+                    <option value="normal">Bulle normale</option>
+                    <option value="thought">Pensée (pointillé)</option>
+                  </select>
+                  <input name="text_color" defaultValue="#000000" />
+                  <input name="background_color" defaultValue="#ffffff" />
+                  <input name="background_opacity" type="number" step="0.1" min={0} max={1} defaultValue={1} />
+                  <button>{t("add_text")}</button>
+                </form>
+              </div>
             </>
           ) : (
             <p>{t("select_panel")}</p>
