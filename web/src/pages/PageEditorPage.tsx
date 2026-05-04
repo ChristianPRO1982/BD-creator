@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useI18n } from "../contexts/LanguageContext";
 import { PanelCanvas } from "../components/PanelCanvas";
@@ -37,15 +37,29 @@ export function PageEditorPage() {
   const [template, setTemplate] = useState<Template | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [assetSearch, setAssetSearch] = useState("");
+  const [assetsExpanded, setAssetsExpanded] = useState(false);
   const [activePanelId, setActivePanelId] = useState<string | null>(null);
   const [textBlocksByPanelId, setTextBlocksByPanelId] = useState<TextBlocksByPanelId>({});
   const [dragState, setDragState] = useState<DragState>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activePanelSize, setActivePanelSize] = useState<{ width: number; height: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   const activePanel = useMemo(
     () => panels.find((panel) => panel.id === activePanelId) || null,
     [panels, activePanelId]
   );
+  const activeSlot = useMemo(
+    () => (activePanel ? template?.slots.find((s) => s.id === activePanel.slot_id) || null : null),
+    [activePanel, template]
+  );
+  const activePanelAspectRatio = useMemo(() => {
+    if (!activeSlot || !template) return undefined;
+    const widthUnits = activeSlot.col_span / template.columns;
+    const heightUnits = activeSlot.row_span / template.rows;
+    if (heightUnits <= 0) return undefined;
+    return widthUnits / heightUnits;
+  }, [activeSlot, template]);
 
   const filteredAssets = useMemo(() => {
     const q = assetSearch.trim().toLowerCase();
@@ -87,6 +101,26 @@ export function PageEditorPage() {
   useEffect(() => {
     load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, [pageId]);
+
+  useEffect(() => {
+    function syncActivePanelSize() {
+      if (!gridRef.current || !activePanelId) {
+        setActivePanelSize(null);
+        return;
+      }
+      const selected = gridRef.current.querySelector<HTMLElement>(`[data-panel-id="${activePanelId}"]`);
+      if (!selected) {
+        setActivePanelSize(null);
+        return;
+      }
+      const rect = selected.getBoundingClientRect();
+      setActivePanelSize({ width: Math.round(rect.width), height: Math.round(rect.height) });
+    }
+
+    syncActivePanelSize();
+    window.addEventListener("resize", syncActivePanelSize);
+    return () => window.removeEventListener("resize", syncActivePanelSize);
+  }, [activePanelId, panels, template]);
 
   useEffect(() => {
     if (!dragState) return;
@@ -135,7 +169,9 @@ export function PageEditorPage() {
     if (!panel) return;
 
     const body = {
-      image_asset_id: patch.image_asset_id ?? panel.image_asset_id,
+      image_asset_id: Object.prototype.hasOwnProperty.call(patch, "image_asset_id")
+        ? patch.image_asset_id
+        : panel.image_asset_id,
       crop_zoom: patch.crop_zoom ?? panel.crop_zoom,
       crop_offset_x: patch.crop_offset_x ?? panel.crop_offset_x,
       crop_offset_y: patch.crop_offset_y ?? panel.crop_offset_y,
@@ -313,6 +349,7 @@ export function PageEditorPage() {
 
       <div className="editor-layout">
         <div
+          ref={gridRef}
           className="page-grid"
           style={{
             gridTemplateColumns: `repeat(${template?.columns || 1}, 1fr)`,
@@ -346,6 +383,15 @@ export function PageEditorPage() {
               <div className="editor-preview">
                 <PanelCanvas
                   panel={activePanel}
+                  aspectRatio={activePanelAspectRatio}
+                  style={
+                    activePanelSize
+                      ? {
+                          width: `${activePanelSize.width}px`,
+                          height: `${activePanelSize.height}px`,
+                        }
+                      : undefined
+                  }
                   asset={assets.find((asset) => asset.id === activePanel.image_asset_id)}
                   textBlocks={activeTextBlocks}
                   mode="edit"
@@ -368,12 +414,24 @@ export function PageEditorPage() {
                 />
                 <button>{t("search")}</button>
               </form>
-              <div className="asset-grid">
+              <div className={`asset-list ${assetsExpanded ? "expanded" : "collapsed"}`}>
                 {filteredAssets.map((asset) => (
-                  <button key={asset.id} onClick={() => onSelectAsset(asset.id)}>
-                    {asset.name}
-                  </button>
+                  <div key={asset.id} className="asset-list-row">
+                    <button onClick={() => onSelectAsset(asset.id)}>
+                      {asset.name}
+                    </button>
+                  </div>
                 ))}
+              </div>
+              <div className="row">
+                <button type="button" onClick={() => setAssetsExpanded((prev) => !prev)}>
+                  {assetsExpanded ? t("shrink") : t("expand")}
+                </button>
+              </div>
+              <div className="row">
+                <button onClick={() => activePanel && updatePanel(activePanel.id, { image_asset_id: null })}>
+                  {t("remove_image")}
+                </button>
               </div>
 
               <p>{t("crop_controls")}</p>

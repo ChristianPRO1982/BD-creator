@@ -78,6 +78,13 @@ export function ComicDetailPage() {
     await load();
   }
 
+  async function onDeletePage(pageId: string) {
+    const confirmed = window.confirm(`${t("confirm_delete_page")} #${pageId} ?`);
+    if (!confirmed) return;
+    await api.del(`/api/pages/${pageId}`);
+    await load();
+  }
+
   async function onDeleteComic() {
     if (!comicId) return;
     setDeleteError(null);
@@ -147,6 +154,7 @@ export function ComicDetailPage() {
               #{page.page_number} - {page.status}
             </Link>
             {page.rendered_image_url ? <a href={resolveMediaUrl(page.rendered_image_url)} target="_blank">JPEG</a> : null}
+            <button type="button" onClick={() => onDeletePage(page.id)}>{t("delete_page")}</button>
           </li>
         ))}
       </ul>

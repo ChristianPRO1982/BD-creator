@@ -289,6 +289,20 @@ def list_pages(comic_id: uuid.UUID, db: Session = Depends(get_db), user: Authent
     return db.scalars(select(Page).where(Page.comic_id == comic_id).order_by(Page.page_number)).all()
 
 
+@router.delete("/pages/{page_id}")
+def delete_page(page_id: uuid.UUID, db: Session = Depends(get_db), user: AuthenticatedUser = Depends(require_user)):
+    page = db.scalar(
+        select(Page)
+        .join(Comic, Comic.id == Page.comic_id)
+        .where(Page.id == page_id, Comic.user_id == user.user_uuid)
+    )
+    if page is None:
+        raise HTTPException(status_code=404, detail="Page not found")
+    db.delete(page)
+    db.commit()
+    return {"ok": True}
+
+
 @router.post("/comics/{comic_id}/pages", response_model=PageOut)
 def create_page(comic_id: uuid.UUID, payload: PageCreate, db: Session = Depends(get_db), user: AuthenticatedUser = Depends(require_user)):
     comic = db.scalar(select(Comic).where(Comic.id == comic_id, Comic.user_id == user.user_uuid))

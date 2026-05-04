@@ -8,6 +8,8 @@ type Props = {
   asset?: Asset;
   textBlocks: TextBlock[];
   mode: "preview" | "edit";
+  aspectRatio?: number;
+  style?: CSSProperties;
   active?: boolean;
   onSelect?: () => void;
   onTextDragStart?: (textBlock: TextBlock, event: MouseEvent<HTMLDivElement>) => void;
@@ -26,7 +28,18 @@ function hexToRgba(color: string, opacity: number) {
   return `rgba(${r}, ${g}, ${b}, ${clamp(opacity, 0, 1)})`;
 }
 
-export function PanelCanvas({ panel, slot, asset, textBlocks, mode, active = false, onSelect, onTextDragStart }: Props) {
+export function PanelCanvas({
+  panel,
+  slot,
+  asset,
+  textBlocks,
+  mode,
+  aspectRatio,
+  style,
+  active = false,
+  onSelect,
+  onTextDragStart,
+}: Props) {
   const zoom = clamp(panel.crop_zoom || 1, 0.2, 5);
   const offsetX = clamp(panel.crop_offset_x || 0, -1, 1);
   const offsetY = clamp(panel.crop_offset_y || 0, -1, 1);
@@ -47,9 +60,12 @@ export function PanelCanvas({ panel, slot, asset, textBlocks, mode, active = fal
     <div
       className={`panel-canvas ${active ? "active" : ""} ${mode === "edit" ? "edit" : ""}`}
       style={{
+        ...style,
         gridColumn: slot ? `${slot.col_start} / span ${slot.col_span}` : undefined,
         gridRow: slot ? `${slot.row_start} / span ${slot.row_span}` : undefined,
+        aspectRatio: aspectRatio && Number.isFinite(aspectRatio) && aspectRatio > 0 ? String(aspectRatio) : undefined,
       }}
+      data-panel-id={panel.id}
       onClick={onSelect}
       role={onSelect ? "button" : undefined}
       tabIndex={onSelect ? 0 : undefined}

@@ -160,6 +160,10 @@ select option {
   min-height: 160px;
 }
 
+.panel-canvas.edit {
+  min-height: 0;
+}
+
 .panel-canvas.active {
   box-shadow: 0 0 0 3px var(--accent);
 }
@@ -244,6 +248,35 @@ select option {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 8px;
+}
+
+.asset-list {
+  margin-top: 8px;
+  border: 1px solid var(--muted);
+  border-radius: 10px;
+  padding: 6px;
+  overflow-y: auto;
+}
+
+.asset-list.collapsed {
+  max-height: 44px;
+}
+
+.asset-list.expanded {
+  max-height: 440px;
+}
+
+.asset-list-row {
+  margin-bottom: 6px;
+}
+
+.asset-list-row:last-child {
+  margin-bottom: 0;
+}
+
+.asset-list-row button {
+  width: 100%;
+  text-align: left;
 }
 
 .asset-gallery {
