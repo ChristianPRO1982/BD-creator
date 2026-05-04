@@ -1,24 +1,34 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { useI18n } from "../contexts/LanguageContext";
 import { api } from "../services/api";
-import { Page, Template } from "../types";
+import { Comic, Page, Template } from "../types";
+
+type ComicRouteState = {
+  comicId?: string;
+  comicName?: string;
+};
 
 export function ComicDetailPage() {
   const { comicId } = useParams<{ comicId: string }>();
+  const location = useLocation();
+  const routeState = (location.state as ComicRouteState | null) ?? null;
   const { t } = useI18n();
   const [pages, setPages] = useState<Page[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [comicName, setComicName] = useState<string>(routeState?.comicName ?? "");
   const [templateId, setTemplateId] = useState<number>(1);
   const [pageNumber, setPageNumber] = useState<number>(1);
 
   async function load() {
-    const [pageData, templateData] = await Promise.all([
+    const [pageData, templateData, comicData] = await Promise.all([
       api.get<Page[]>(`/api/comics/${comicId}/pages`),
       api.get<Template[]>("/api/templates"),
+      api.get<Comic>(`/api/comics/${comicId}`),
     ]);
     setPages(pageData);
     setTemplates(templateData);
+    setComicName(comicData.name);
   }
 
   useEffect(() => {
@@ -53,7 +63,9 @@ export function ComicDetailPage() {
       <ul className="list">
         {pages.map((page) => (
           <li key={page.id}>
-            <Link to={`/pages/${page.id}`}>#{page.page_number} - {page.status}</Link>
+            <Link to={`/pages/${page.id}`} state={{ comicId, comicName }}>
+              #{page.page_number} - {page.status}
+            </Link>
             {page.rendered_image_url ? <a href={page.rendered_image_url} target="_blank">JPEG</a> : null}
           </li>
         ))}

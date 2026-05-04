@@ -3,6 +3,7 @@ export type Lang = "fr" | "en";
 export const messages: Record<Lang, Record<string, string>> = {
   fr: {
     app_title: "BD Creator",
+    home: "Accueil",
     comics: "BD",
     new_comic: "Nouvelle BD",
     name: "Nom",
@@ -37,6 +38,7 @@ export const messages: Record<Lang, Record<string, string>> = {
   },
   en: {
     app_title: "BD Creator",
+    home: "Home",
     comics: "Comics",
     new_comic: "New comic",
     name: "Name",

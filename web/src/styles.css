@@ -33,6 +33,38 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px; }
   border-bottom: 1px solid var(--muted);
   background: var(--card);
 }
+.topbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.topbar-left h1 {
+  margin: 0;
+}
+.topbar-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.92rem;
+}
+.crumb-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.crumb-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+.crumb-current {
+  color: var(--fg);
+  font-weight: 700;
+}
+.crumb-separator {
+  color: var(--fg);
+  opacity: 0.6;
+}
 
 .controls { display: flex; gap: 10px; align-items: center; }
 .switch-group { display: flex; gap: 6px; }
@@ -72,6 +104,10 @@ input, select {
   color: var(--fg);
   border-radius: 10px;
   padding: 8px;
+}
+select option {
+  color: #111111;
+  background: #ffffff;
 }
 .list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
 .list li { display: flex; gap: 12px; align-items: center; }
@@ -202,6 +238,8 @@ input, select {
 
 @media (max-width: 760px) {
   .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .topbar-left { width: 100%; }
+  .topbar-nav { width: 100%; }
   .controls { flex-wrap: wrap; }
   .dropdown-group { width: 100%; justify-content: space-between; }
   .dropdown-group select { width: min(220px, 100%); }

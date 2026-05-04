@@ -1,13 +1,50 @@
+import { Link, useLocation, useMatch } from "react-router-dom";
 import { useI18n } from "../contexts/LanguageContext";
 import { useTheme } from "../contexts/ThemeContext";
+
+type BreadcrumbState = {
+  comicId?: string;
+  comicName?: string;
+};
 
 export function TopBar() {
   const { t, lang, setLang } = useI18n();
   const { theme, setTheme } = useTheme();
+  const location = useLocation();
+  const isComicRoute = useMatch("/comics/:comicId");
+  const isPageRoute = useMatch("/pages/:pageId");
+  const state = (location.state as BreadcrumbState | null) ?? null;
+  const comicId = state?.comicId ?? isComicRoute?.params.comicId;
+  const comicLabel = state?.comicName ?? t("comics");
+
+  const crumbs: { label: string; to: string | null }[] = [{ label: t("home"), to: "/" }];
+  if (isComicRoute || isPageRoute) {
+    crumbs.push({ label: comicLabel, to: isPageRoute && comicId ? `/comics/${comicId}` : null });
+  }
+  if (isPageRoute) {
+    crumbs.push({ label: t("pages"), to: null });
+  }
 
   return (
     <header className="topbar">
-      <h1>{t("app_title")}</h1>
+      <div className="topbar-left">
+        <h1>{t("app_title")}</h1>
+        <nav className="topbar-nav" aria-label="Breadcrumb">
+          {crumbs.map((crumb, index) => {
+            const isLast = index === crumbs.length - 1;
+            return (
+              <span key={`${crumb.label}-${index}`} className="crumb-wrap">
+                {crumb.to && !isLast && location.pathname !== crumb.to ? (
+                  <Link className="crumb-link" to={crumb.to}>{crumb.label}</Link>
+                ) : (
+                  <span className={isLast ? "crumb-current" : "crumb-link"}>{crumb.label}</span>
+                )}
+                {!isLast ? <span className="crumb-separator">/</span> : null}
+              </span>
+            );
+          })}
+        </nav>
+      </div>
       <div className="controls">
         <div className="dropdown-group">
           <label htmlFor="theme-select">{t("theme")}</label>

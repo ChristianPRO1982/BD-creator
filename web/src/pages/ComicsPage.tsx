@@ -34,7 +34,9 @@ export function ComicsPage() {
       <ul className="list">
         {comics.map((comic) => (
           <li key={comic.id}>
-            <Link to={`/comics/${comic.id}`}>{comic.name}</Link>
+            <Link to={`/comics/${comic.id}`} state={{ comicId: comic.id, comicName: comic.name }}>
+              {comic.name}
+            </Link>
           </li>
         ))}
       </ul>
