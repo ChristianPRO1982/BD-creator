@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useI18n } from "../contexts/LanguageContext";
 import { api, uploadComicAsset } from "../services/api";
-import { resolveMediaUrl } from "../services/media";
+import { assetContentUrl } from "../services/media";
 import { Asset, Comic } from "../types";
 
 export function ComicAssetsPage() {
@@ -31,14 +31,26 @@ export function ComicAssetsPage() {
   async function onUpload(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!comicId) return;
-    const form = new FormData(e.currentTarget);
+    const formElement = e.currentTarget;
+    const form = new FormData(formElement);
     const file = form.get("file");
     const name = String(form.get("name") || "").trim();
     if (!(file instanceof File)) return;
 
     try {
       await uploadComicAsset(comicId, file, name || file.name);
-      e.currentTarget.reset();
+      formElement.reset();
+      await load(search);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function onDeleteAsset(assetId: string, assetName: string) {
+    const confirmed = window.confirm(`${t("confirm_delete_asset")} "${assetName}" ?`);
+    if (!confirmed) return;
+    try {
+      await api.del(`/api/assets/${assetId}`);
       await load(search);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -75,8 +87,11 @@ export function ComicAssetsPage() {
       <div className="asset-gallery">
         {assets.map((asset) => (
           <article key={asset.id} className="asset-card">
-            <img src={resolveMediaUrl(asset.file_path)} alt={asset.name} loading="lazy" />
+            <img src={assetContentUrl(asset.id)} alt={asset.name} loading="lazy" />
             <p>{asset.name}</p>
+            <div className="row">
+              <button type="button" onClick={() => onDeleteAsset(asset.id, asset.name)}>{t("delete")}</button>
+            </div>
           </article>
         ))}
       </div>

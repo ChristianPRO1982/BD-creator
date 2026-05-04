@@ -34,6 +34,45 @@ class S3Storage:
             key,
             ExtraArgs={"ContentType": content_type},
         )
+        return self.file_url_for_key(key)
+
+    def download_bytes(self, key: str) -> tuple[bytes, str]:
+        response = self.client.get_object(Bucket=settings.s3_bucket, Key=key)
+        content_type = response.get("ContentType", "application/octet-stream")
+        data = response["Body"].read()
+        return data, content_type
+
+    def delete_object(self, key: str) -> None:
+        self.client.delete_object(Bucket=settings.s3_bucket, Key=key)
+
+    def object_exists(self, key: str) -> bool:
+        try:
+            self.client.head_object(Bucket=settings.s3_bucket, Key=key)
+            return True
+        except Exception:
+            return False
+
+    def list_objects(self, prefix: str) -> list[str]:
+        paginator = self.client.get_paginator("list_objects_v2")
+        keys: list[str] = []
+        for page in paginator.paginate(Bucket=settings.s3_bucket, Prefix=prefix):
+            for item in page.get("Contents", []):
+                key = item.get("Key")
+                if key:
+                    keys.append(key)
+        return keys
+
+    def key_from_url(self, file_url: str) -> str:
+        parsed = urlparse(file_url)
+        path = parsed.path.lstrip("/")
+        bucket_prefix = f"{settings.s3_bucket}/"
+        if path.startswith(bucket_prefix):
+            return path[len(bucket_prefix):]
+        if path == settings.s3_bucket:
+            return ""
+        return path
+
+    def file_url_for_key(self, key: str) -> str:
         endpoint = self._public_endpoint().rstrip("/")
         return f"{endpoint}/{settings.s3_bucket}/{key}"
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
@@ -386,6 +386,59 @@ def list_comic_assets(
     if search:
         stmt = stmt.where(Asset.name.ilike(f"%{search}%"))
     return db.scalars(stmt.order_by(Asset.name.asc())).all()
+
+
+@router.get("/assets/{asset_id}/content")
+def get_asset_content(
+    asset_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: AuthenticatedUser = Depends(require_user),
+):
+    asset = db.scalar(
+        select(Asset)
+        .join(Comic, Comic.id == Asset.comic_id)
+        .where(Asset.id == asset_id, Comic.user_id == user.user_uuid)
+    )
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    key = storage.key_from_url(asset.file_path)
+    if not key:
+        raise HTTPException(status_code=404, detail="Asset file is missing")
+    try:
+        data, content_type = storage.download_bytes(key)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail="Asset file is missing") from exc
+    return Response(content=data, media_type=content_type)
+
+
+@router.delete("/assets/{asset_id}")
+def delete_asset(
+    asset_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: AuthenticatedUser = Depends(require_user),
+):
+    asset = db.scalar(
+        select(Asset)
+        .join(Comic, Comic.id == Asset.comic_id)
+        .where(Asset.id == asset_id, Comic.user_id == user.user_uuid)
+    )
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    panel_in_use = db.scalar(select(Panel.id).where(Panel.image_asset_id == asset_id).limit(1))
+    if panel_in_use is not None:
+        raise HTTPException(status_code=409, detail="Asset is used by one or more panels")
+
+    key = storage.key_from_url(asset.file_path)
+    if key:
+        try:
+            storage.delete_object(key)
+        except Exception:
+            pass
+    db.delete(asset)
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/render/comics/{comic_id}/generate-missing")
