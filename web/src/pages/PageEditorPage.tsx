@@ -40,8 +40,20 @@ function makeBubbleStyle(thought: boolean, tail: BubbleTail): string {
   return parts.join("|");
 }
 
+function tailLabel(tail: BubbleTail): string {
+  if (tail === "tail_top_left") return "Flèche Top-Left";
+  if (tail === "tail_top_right") return "Flèche Top-Right";
+  if (tail === "tail_bottom_left") return "Flèche Bottom-Left";
+  if (tail === "tail_bottom_right") return "Flèche Bottom-Right";
+  return "Sans flèche";
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function safeNumber(value: number, fallback: number) {
+  return Number.isFinite(value) ? value : fallback;
 }
 
 function shiftPanelCrop(panel: Panel, axis: "x" | "y", delta: number) {
@@ -60,6 +72,7 @@ export function PageEditorPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [assetSearch, setAssetSearch] = useState("");
   const [assetsExpanded, setAssetsExpanded] = useState(false);
+  const [newTextTail, setNewTextTail] = useState<BubbleTail>("none");
   const [activePanelId, setActivePanelId] = useState<string | null>(null);
   const [textBlocksByPanelId, setTextBlocksByPanelId] = useState<TextBlocksByPanelId>({});
   const [dragState, setDragState] = useState<DragState>(null);
@@ -233,28 +246,37 @@ export function PageEditorPage() {
         background_opacity: Number(form.get("background_opacity") || 1),
       });
       e.currentTarget.reset();
+      setNewTextTail("none");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
   }
 
-  async function onUpdateText(textBlockId: string) {
+  async function onUpdateText(textBlockId: string, formEl?: HTMLFormElement, override?: Partial<TextBlock>) {
     if (!activePanel || !page || page.status === "validated") return;
     const current = (textBlocksByPanelId[activePanel.id] || []).find((tb) => tb.id === textBlockId);
     if (!current) return;
 
+    const formData = formEl ? new FormData(formEl) : null;
+    const formTail = (formData?.get("bubble_tail") as BubbleTail | null) || null;
+    const formKind = (formData?.get("bubble_kind") as string | null) || null;
+
     const body = {
-      content: current.content,
-      x: current.x,
-      y: current.y,
-      width: current.width,
-      height: current.height,
-      font_size: current.font_size,
-      bubble_style: current.bubble_style,
-      text_color: current.text_color,
-      background_color: current.background_color,
-      background_opacity: current.background_opacity,
+      content: String(formData?.get("content") ?? current.content),
+      x: clamp(safeNumber(Number(formData?.get("x") ?? current.x), 0.1), 0, 1),
+      y: clamp(safeNumber(Number(formData?.get("y") ?? current.y), 0.1), 0, 1),
+      width: clamp(safeNumber(Number(formData?.get("width") ?? current.width), 0.5), 0.01, 1),
+      height: clamp(safeNumber(Number(formData?.get("height") ?? current.height), 0.2), 0.01, 1),
+      font_size: Math.max(8, Math.round(safeNumber(Number(formData?.get("font_size") ?? current.font_size), 16))),
+      bubble_style: override?.bubble_style ?? (
+        formTail || formKind
+        ? makeBubbleStyle(formKind === "thought", (formTail || "none") as BubbleTail)
+        : current.bubble_style
+      ),
+      text_color: String(formData?.get("text_color") ?? current.text_color),
+      background_color: String(formData?.get("background_color") ?? current.background_color),
+      background_opacity: clamp(safeNumber(Number(formData?.get("background_opacity") ?? current.background_opacity), 1), 0, 1),
     };
 
     try {
@@ -375,10 +397,10 @@ export function PageEditorPage() {
         {t("pages")} #{page?.page_number}
       </h2>
       <div className="row">
-        <button onClick={onValidate} disabled={!page || page.status === "validated"}>
+        <button type="button" onClick={onValidate} disabled={!page || page.status === "validated"}>
           {t("validate")}
         </button>
-        <button onClick={onUnvalidate} disabled={!page || page.status === "draft"}>
+        <button type="button" onClick={onUnvalidate} disabled={!page || page.status === "draft"}>
           {t("unvalidate")}
         </button>
         {page ? <Link to={`/comics/${page.comic_id}/assets`}>{t("assets_bank")}</Link> : null}
@@ -438,8 +460,11 @@ export function PageEditorPage() {
                   onTextDragStart={onDragStart}
                 />
               </div>
-              <div className="editor-controls-scroll">
-                <p>{t("assets")}</p>
+              <div
+                className="editor-controls-scroll"
+                style={{ height: "800px" }}
+              >
+                <h2 className="editor-section-title">{t("assets")}</h2>
                 <form
                   className="row"
                   onSubmit={(e) => {
@@ -452,12 +477,12 @@ export function PageEditorPage() {
                     onChange={(e) => setAssetSearch(e.target.value)}
                     placeholder={t("search_assets")}
                   />
-                  <button>{t("search")}</button>
+                  <button type="submit">{t("search")}</button>
                 </form>
                 <div className={`asset-list ${assetsExpanded ? "expanded" : "collapsed"}`}>
                   {filteredAssets.map((asset) => (
                     <div key={asset.id} className="asset-list-row">
-                      <button onClick={() => onSelectAsset(asset.id)}>
+                      <button type="button" onClick={() => onSelectAsset(asset.id)}>
                         {asset.name}
                       </button>
                     </div>
@@ -469,87 +494,204 @@ export function PageEditorPage() {
                   </button>
                 </div>
                 <div className="row">
-                  <button onClick={() => activePanel && updatePanel(activePanel.id, { image_asset_id: null })}>
+                  <button type="button" onClick={() => activePanel && updatePanel(activePanel.id, { image_asset_id: null })}>
                     {t("remove_image")}
                   </button>
                 </div>
 
-                <p>{t("crop_controls")}</p>
-                <div className="row wrap">
-                  <button onClick={() => onCrop("zoom_in")}>Zoom +</button>
-                  <button onClick={() => onCrop("zoom_out")}>Zoom -</button>
-                  <button onClick={() => onCrop("left")}>◀</button>
-                  <button onClick={() => onCrop("right")}>▶</button>
-                  <button onClick={() => onCrop("up")}>▲</button>
-                  <button onClick={() => onCrop("down")}>▼</button>
-                  <button onClick={() => onCrop("reset")}>{t("reset")}</button>
+                <h2 className="editor-section-title">{t("crop_controls")}</h2>
+                <div className="crop-controls">
+                  <div className="crop-zoom-row">
+                    <button type="button" onClick={() => onCrop("zoom_in")}>Zoom +</button>
+                    <button type="button" onClick={() => onCrop("zoom_out")}>Zoom -</button>
+                  </div>
+                  <div className="crop-arrows">
+                    <div className="crop-arrow-row">
+                      <button type="button" onClick={() => onCrop("up")}>▲</button>
+                    </div>
+                    <div className="crop-arrow-row">
+                      <button type="button" onClick={() => onCrop("left")}>◀</button>
+                      <span className="crop-arrow-gap" />
+                      <button type="button" onClick={() => onCrop("right")}>▶</button>
+                    </div>
+                    <div className="crop-arrow-row">
+                      <button type="button" onClick={() => onCrop("down")}>▼</button>
+                    </div>
+                  </div>
+                  <div className="crop-reset-row">
+                    <button type="button" onClick={() => onCrop("reset")}>{t("reset")}</button>
+                  </div>
                 </div>
 
-                <p>{t("text_blocks")}</p>
+                <h2 className="editor-section-title">{t("text_blocks")}</h2>
                 <div className="text-block-list">
                   {activeTextBlocks.map((tb) => (
-                    <div className="text-block-editor" key={tb.id}>
+                    <form
+                      className="text-block-editor"
+                      key={tb.id}
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        onUpdateText(tb.id, e.currentTarget);
+                      }}
+                    >
                       <textarea
+                        name="content"
                         value={tb.content}
                         onChange={(e) => onTextFieldChange(tb.id, "content", e.target.value)}
+                        onBlur={() => onUpdateText(tb.id)}
                       />
                       <div className="row wrap">
-                        <input type="number" step="0.01" value={tb.x} onChange={(e) => onTextFieldChange(tb.id, "x", Number(e.target.value))} />
-                        <input type="number" step="0.01" value={tb.y} onChange={(e) => onTextFieldChange(tb.id, "y", Number(e.target.value))} />
-                        <input type="number" step="0.01" min={0.01} max={1} value={tb.width} onChange={(e) => onTextFieldChange(tb.id, "width", Number(e.target.value))} />
-                        <input type="number" step="0.01" min={0.01} max={1} value={tb.height} onChange={(e) => onTextFieldChange(tb.id, "height", Number(e.target.value))} />
-                        <input type="number" min={8} max={72} value={tb.font_size} onChange={(e) => onTextFieldChange(tb.id, "font_size", Number(e.target.value))} />
+                        <label className="compact-field">x<input name="x" type="number" step="0.01" value={tb.x} onChange={(e) => onTextFieldChange(tb.id, "x", Number(e.target.value))} onBlur={() => onUpdateText(tb.id)} /></label>
+                        <label className="compact-field">y<input name="y" type="number" step="0.01" value={tb.y} onChange={(e) => onTextFieldChange(tb.id, "y", Number(e.target.value))} onBlur={() => onUpdateText(tb.id)} /></label>
+                        <label className="compact-field">w<input name="width" type="number" step="0.01" min={0.01} max={1} value={tb.width} onChange={(e) => onTextFieldChange(tb.id, "width", Number(e.target.value))} onBlur={() => onUpdateText(tb.id)} /></label>
+                        <label className="compact-field">h<input name="height" type="number" step="0.01" min={0.01} max={1} value={tb.height} onChange={(e) => onTextFieldChange(tb.id, "height", Number(e.target.value))} onBlur={() => onUpdateText(tb.id)} /></label>
+                        <label className="compact-field">fs<input name="font_size" type="number" min={8} max={72} value={tb.font_size} onChange={(e) => onTextFieldChange(tb.id, "font_size", Number(e.target.value))} onBlur={() => onUpdateText(tb.id)} /></label>
+                        <input type="hidden" name="bubble_tail" value={parseBubbleStyle(tb.bubble_style).tail} />
+                        <div className="bubble-tail-picker">
+                          <button
+                            type="button"
+                            className={parseBubbleStyle(tb.bubble_style).tail === "none" ? "active" : ""}
+                              onClick={() => {
+                                const nextStyle = makeBubbleStyle(parseBubbleStyle(tb.bubble_style).thought, "none");
+                                onBubbleTailChange(tb.id, "none");
+                                onUpdateText(tb.id, undefined, { bubble_style: nextStyle });
+                              }}
+                            title={tailLabel("none")}
+                          >
+                            Sans flèche
+                          </button>
+                          <div className="bubble-tail-row">
+                            <button
+                              type="button"
+                              className={parseBubbleStyle(tb.bubble_style).tail === "tail_top_left" ? "active" : ""}
+                              onClick={() => {
+                                const nextStyle = makeBubbleStyle(parseBubbleStyle(tb.bubble_style).thought, "tail_top_left");
+                                onBubbleTailChange(tb.id, "tail_top_left");
+                                onUpdateText(tb.id, undefined, { bubble_style: nextStyle });
+                              }}
+                              title={tailLabel("tail_top_left")}
+                            >
+                              Flèche Top-Left
+                            </button>
+                            <button
+                              type="button"
+                              className={parseBubbleStyle(tb.bubble_style).tail === "tail_top_right" ? "active" : ""}
+                              onClick={() => {
+                                const nextStyle = makeBubbleStyle(parseBubbleStyle(tb.bubble_style).thought, "tail_top_right");
+                                onBubbleTailChange(tb.id, "tail_top_right");
+                                onUpdateText(tb.id, undefined, { bubble_style: nextStyle });
+                              }}
+                              title={tailLabel("tail_top_right")}
+                            >
+                              Flèche Top-Right
+                            </button>
+                          </div>
+                          <div className="bubble-tail-row">
+                            <button
+                              type="button"
+                              className={parseBubbleStyle(tb.bubble_style).tail === "tail_bottom_left" ? "active" : ""}
+                              onClick={() => {
+                                const nextStyle = makeBubbleStyle(parseBubbleStyle(tb.bubble_style).thought, "tail_bottom_left");
+                                onBubbleTailChange(tb.id, "tail_bottom_left");
+                                onUpdateText(tb.id, undefined, { bubble_style: nextStyle });
+                              }}
+                              title={tailLabel("tail_bottom_left")}
+                            >
+                              Flèche Bottom-Left
+                            </button>
+                            <button
+                              type="button"
+                              className={parseBubbleStyle(tb.bubble_style).tail === "tail_bottom_right" ? "active" : ""}
+                              onClick={() => {
+                                const nextStyle = makeBubbleStyle(parseBubbleStyle(tb.bubble_style).thought, "tail_bottom_right");
+                                onBubbleTailChange(tb.id, "tail_bottom_right");
+                                onUpdateText(tb.id, undefined, { bubble_style: nextStyle });
+                              }}
+                              title={tailLabel("tail_bottom_right")}
+                            >
+                              Flèche Bottom-Right
+                            </button>
+                          </div>
+                        </div>
                         <select
-                          value={parseBubbleStyle(tb.bubble_style).tail}
-                          onChange={(e) => onBubbleTailChange(tb.id, e.target.value as BubbleTail)}
-                        >
-                          <option value="none">Sans flèche</option>
-                          <option value="tail_top_left">Flèche coin haut gauche</option>
-                          <option value="tail_top_right">Flèche coin haut droit</option>
-                          <option value="tail_bottom_left">Flèche coin bas gauche</option>
-                          <option value="tail_bottom_right">Flèche coin bas droit</option>
-                        </select>
-                        <select
+                          name="bubble_kind"
                           value={parseBubbleStyle(tb.bubble_style).thought ? "thought" : "normal"}
                           onChange={(e) => onBubbleThoughtChange(tb.id, e.target.value === "thought")}
+                          onBlur={() => onUpdateText(tb.id)}
                         >
                           <option value="normal">Bulle normale</option>
                           <option value="thought">Pensée (pointillé)</option>
                         </select>
-                        <input value={tb.text_color} onChange={(e) => onTextFieldChange(tb.id, "text_color", e.target.value)} />
-                        <input value={tb.background_color} onChange={(e) => onTextFieldChange(tb.id, "background_color", e.target.value)} />
-                        <input type="number" step="0.1" min={0} max={1} value={tb.background_opacity} onChange={(e) => onTextFieldChange(tb.id, "background_opacity", Number(e.target.value))} />
+                        <label className="compact-field">fc<input name="text_color" value={tb.text_color} onChange={(e) => onTextFieldChange(tb.id, "text_color", e.target.value)} onBlur={() => onUpdateText(tb.id)} /></label>
+                        <label className="compact-field">bc<input name="background_color" value={tb.background_color} onChange={(e) => onTextFieldChange(tb.id, "background_color", e.target.value)} onBlur={() => onUpdateText(tb.id)} /></label>
+                        <label className="compact-field">t<input name="background_opacity" type="number" step="0.1" min={0} max={1} value={tb.background_opacity} onChange={(e) => onTextFieldChange(tb.id, "background_opacity", Number(e.target.value))} onBlur={() => onUpdateText(tb.id)} /></label>
                       </div>
                       <div className="row wrap">
-                        <button onClick={() => onUpdateText(tb.id)}>{t("save")}</button>
-                        <button onClick={() => onDeleteText(tb.id)}>{t("delete")}</button>
+                        <button type="submit">{t("save")}</button>
+                        <button type="button" onClick={() => onDeleteText(tb.id)}>{t("delete")}</button>
                       </div>
-                    </div>
+                    </form>
                   ))}
                 </div>
 
+                <h2 className="editor-section-title">{t("add_text")}</h2>
                 <form className="row wrap" onSubmit={onAddText}>
                   <input name="content" placeholder="content" required />
-                  <input name="x" type="number" step="0.01" defaultValue={0.1} min={0} max={1} />
-                  <input name="y" type="number" step="0.01" defaultValue={0.1} min={0} max={1} />
-                  <input name="width" type="number" step="0.01" defaultValue={0.5} min={0.01} max={1} />
-                  <input name="height" type="number" step="0.01" defaultValue={0.2} min={0.01} max={1} />
-                  <input name="font_size" type="number" defaultValue={16} min={8} max={72} />
-                  <select name="bubble_tail" defaultValue="none">
-                    <option value="none">Sans flèche</option>
-                    <option value="tail_top_left">Flèche coin haut gauche</option>
-                    <option value="tail_top_right">Flèche coin haut droit</option>
-                    <option value="tail_bottom_left">Flèche coin bas gauche</option>
-                    <option value="tail_bottom_right">Flèche coin bas droit</option>
-                  </select>
+                  <label className="compact-field">x<input name="x" type="number" step="0.01" defaultValue={0.1} min={0} max={1} /></label>
+                  <label className="compact-field">y<input name="y" type="number" step="0.01" defaultValue={0.1} min={0} max={1} /></label>
+                  <label className="compact-field">w<input name="width" type="number" step="0.01" defaultValue={0.5} min={0.01} max={1} /></label>
+                  <label className="compact-field">h<input name="height" type="number" step="0.01" defaultValue={0.2} min={0.01} max={1} /></label>
+                  <label className="compact-field">fs<input name="font_size" type="number" defaultValue={16} min={8} max={72} /></label>
+                  <input type="hidden" name="bubble_tail" value={newTextTail} />
+                  <div className="bubble-tail-picker">
+                    <button
+                      type="button"
+                      className={newTextTail === "none" ? "active" : ""}
+                      onClick={() => setNewTextTail("none")}
+                    >
+                      Sans flèche
+                    </button>
+                    <div className="bubble-tail-row">
+                      <button
+                        type="button"
+                        className={newTextTail === "tail_top_left" ? "active" : ""}
+                        onClick={() => setNewTextTail("tail_top_left")}
+                      >
+                        Flèche Top-Left
+                      </button>
+                      <button
+                        type="button"
+                        className={newTextTail === "tail_top_right" ? "active" : ""}
+                        onClick={() => setNewTextTail("tail_top_right")}
+                      >
+                        Flèche Top-Right
+                      </button>
+                    </div>
+                    <div className="bubble-tail-row">
+                      <button
+                        type="button"
+                        className={newTextTail === "tail_bottom_left" ? "active" : ""}
+                        onClick={() => setNewTextTail("tail_bottom_left")}
+                      >
+                        Flèche Bottom-Left
+                      </button>
+                      <button
+                        type="button"
+                        className={newTextTail === "tail_bottom_right" ? "active" : ""}
+                        onClick={() => setNewTextTail("tail_bottom_right")}
+                      >
+                        Flèche Bottom-Right
+                      </button>
+                    </div>
+                  </div>
                   <select name="bubble_kind" defaultValue="normal">
                     <option value="normal">Bulle normale</option>
                     <option value="thought">Pensée (pointillé)</option>
                   </select>
-                  <input name="text_color" defaultValue="#000000" />
-                  <input name="background_color" defaultValue="#ffffff" />
-                  <input name="background_opacity" type="number" step="0.1" min={0} max={1} defaultValue={1} />
-                  <button>{t("add_text")}</button>
+                  <label className="compact-field">fc<input name="text_color" defaultValue="#000000" /></label>
+                  <label className="compact-field">bc<input name="background_color" defaultValue="#ffffff" /></label>
+                  <label className="compact-field">t<input name="background_opacity" type="number" step="0.1" min={0} max={1} defaultValue={1} /></label>
+                  <button type="submit">{t("add_text")}</button>
                 </form>
               </div>
             </>

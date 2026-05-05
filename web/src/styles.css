@@ -147,8 +147,7 @@ select option {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 75vh;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .editor-preview {
@@ -232,6 +231,71 @@ select option {
   width: 100%;
   min-height: 70px;
   margin-bottom: 8px;
+}
+
+.crop-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.crop-zoom-row {
+  display: flex;
+  gap: 8px;
+}
+
+.crop-arrows {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.crop-arrow-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crop-arrow-gap {
+  display: inline-block;
+  width: 18px;
+}
+
+.crop-reset-row {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.editor-section-title {
+  margin-top: 18px;
+  margin-bottom: 10px;
+}
+
+.bubble-tail-picker {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+}
+
+.bubble-tail-picker > button {
+  width: 100%;
+}
+
+.bubble-tail-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.bubble-tail-picker button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.compact-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
 }
 
 .error-text {
